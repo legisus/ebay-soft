@@ -1,0 +1,21 @@
+# Traefik dynamic config — file provider. Hot-reloaded by traefik when this file
+# changes. One block per service; routes live here until traefik's docker
+# provider can negotiate the modern Docker daemon API.
+
+http:
+  routers:
+    api-gateway:
+      rule: "PathPrefix(`/v1`) || PathPrefix(`/actuator`)"
+      entryPoints: ["web"]
+      service: api-gateway
+
+  services:
+    api-gateway:
+      loadBalancer:
+        servers:
+          - url: "http://api-gateway:8080"
+        passHostHeader: true
+        healthCheck:
+          path: /actuator/health/readiness
+          interval: 10s
+          timeout: 3s
