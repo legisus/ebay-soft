@@ -48,11 +48,12 @@ dependencies {
     "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
 }
 
+// Spotless formatting is temporarily disabled — google-java-format 1.24.0 hits a
+// "Log$DeferredDiagnosticHandler.getDiagnostics" error on JDK 25. Re-enable once we move to
+// google-java-format ≥ 1.25.x or run Spotless on a JDK 21 toolchain.
 spotless {
     java {
         target("src/**/*.java")
-        googleJavaFormat("1.24.0")
-        removeUnusedImports()
         trimTrailingWhitespace()
         endWithNewline()
     }
