@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:                # manual re-deploy from the Actions tab
+    inputs:
+      services:
+        description: 'Comma-separated services to rebuild (blank = changed only)'
+        required: false
+        default: ''
 
 # Never run two deploys in parallel against the same box.
 concurrency:
@@ -14,13 +19,15 @@ jobs:
   deploy:
     name: Pull + build + recreate on Hetzner
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
-    # Public-repo safety: never run on forks or PR runs (they can't have the secret anyway,
-    # but the explicit gate is documentation).
+    timeout-minutes: 30
     if: github.repository == 'legisus/ebay-soft'
     environment:
       name: production
       url: https://ebay-soft.com/v1/health
+    env:
+      # Build one service at a time — the box is 2 vCPU / 8 GB; parallel builds
+      # swap-thrash and time out the SSH session.
+      COMPOSE_PARALLEL_LIMIT: '1'
     steps:
       - name: Authorize SSH agent with deploy key
         uses: webfactory/ssh-agent@v0.9.0
@@ -34,27 +41,68 @@ jobs:
           echo "${{ secrets.HETZNER_SSH_HOST }} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIpMx7Z3Sg/mLxT2YBhbyiateIsqpgL5yz0hLIlHzCmT" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
+      - name: Compute services to rebuild
+        id: services
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER:  ${{ github.event.after }}
+          MANUAL: ${{ github.event.inputs.services }}
+        run: |
+          set -e
+          if [ -n "$MANUAL" ]; then
+            echo "list=$MANUAL" >> "$GITHUB_OUTPUT"
+            echo "  manual override: $MANUAL"
+            exit 0
+          fi
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            # New branch / first push — rebuild everything.
+            echo "list=" >> "$GITHUB_OUTPUT"
+            echo "  full rebuild (no BEFORE sha)"
+            exit 0
+          fi
+
+          # Anything under buildSrc/, libs/, gradle/, settings.gradle.kts → rebuild every service.
+          shared=$(git diff --name-only "$BEFORE..$AFTER" 2>/dev/null | grep -E '^(buildSrc/|libs/|gradle/|settings\.gradle\.kts|build\.gradle\.kts|gradle\.properties)' || true)
+          if [ -n "$shared" ]; then
+            echo "list=" >> "$GITHUB_OUTPUT"
+            echo "  shared file touched — full rebuild"
+            echo "$shared" | head -5
+            exit 0
+          fi
+
+          # Otherwise: only services whose own dir changed.
+          changed=$(git diff --name-only "$BEFORE..$AFTER" 2>/dev/null | awk -F/ '/^services\// {print $2}' | sort -u | tr '\n' ' ')
+          echo "list=$changed" >> "$GITHUB_OUTPUT"
+          echo "  changed services: ${changed:-<none>}"
+
       - name: Deploy
         env:
           HOST: ${{ secrets.HETZNER_SSH_HOST }}
           USER: ${{ secrets.HETZNER_SSH_USER }}
+          SERVICES: ${{ steps.services.outputs.list }}
         run: |
-          # Single SSH session keeps every step in the same shell — cheaper and
-          # easier to reason about than 6 separate ssh calls.
-          ssh -o BatchMode=yes "$USER@$HOST" bash -eux <<'SCRIPT'
+          # SSH keepalive: send a no-op every 30s, allow up to 30min idle before giving up.
+          # Without this the connection times out during long compose builds on the small box.
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=60 -o BatchMode=yes \
+              "$USER@$HOST" \
+              "SERVICES='$SERVICES' bash -eux" <<'SCRIPT'
             cd /opt/ebay-soft
             git fetch origin --prune
             git checkout main
             git pull --ff-only origin main
 
-            # Build any service whose source changed (Docker layer cache handles the rest).
-            docker compose -f compose.prod.yml --env-file /etc/ebay-soft/env build --pull
+            export COMPOSE_PARALLEL_LIMIT=1
 
-            # Recreate containers whose image hash moved. --remove-orphans keeps the
-            # compose state clean when we remove a service from the include list.
-            docker compose -f compose.prod.yml --env-file /etc/ebay-soft/env up -d --remove-orphans
+            if [ -z "$SERVICES" ]; then
+              echo "→ rebuilding all services (shared changes or first deploy)"
+              docker compose -f compose.prod.yml --env-file /etc/ebay-soft/env build
+              docker compose -f compose.prod.yml --env-file /etc/ebay-soft/env up -d --remove-orphans
+            else
+              echo "→ rebuilding only: $SERVICES"
+              docker compose -f compose.prod.yml --env-file /etc/ebay-soft/env build $SERVICES
+              docker compose -f compose.prod.yml --env-file /etc/ebay-soft/env up -d $SERVICES
+            fi
 
-            # Prune dangling images from the build, but keep one previous tag for rollback.
             docker image prune --filter "until=24h" -f >/dev/null
           SCRIPT
 
@@ -63,8 +111,7 @@ jobs:
           BASE: https://ebay-soft.com
         run: |
           set -e
-          # Allow up to 90s for newly recreated containers to pass their readiness probes.
-          for path in /v1/health /v1/sync/status?tenantId=11111111-1111-1111-1111-111111111111 /v1/oauth/ebay/start; do
+          for path in '/v1/health' '/v1/sync/status?tenantId=11111111-1111-1111-1111-111111111111' '/v1/oauth/ebay/start'; do
             echo "Probing $BASE$path"
             for attempt in $(seq 1 18); do
               code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 "$BASE$path")
@@ -79,8 +126,8 @@ jobs:
         run: |
           {
             echo "## Deploy result"
-            echo "- ref: ${GITHUB_REF}"
-            echo "- sha: ${GITHUB_SHA}"
-            echo "- host: ${{ secrets.HETZNER_SSH_HOST }}"
+            echo "- ref: \`${GITHUB_REF}\`"
+            echo "- sha: \`${GITHUB_SHA}\`"
+            echo "- services rebuilt: \`${{ steps.services.outputs.list || '(all)' }}\`"
             echo "- live: https://ebay-soft.com/v1/health"
           } >> "$GITHUB_STEP_SUMMARY"
