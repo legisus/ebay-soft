@@ -1,0 +1,32 @@
+services:
+  ebay-conn-api:
+    build:
+      context: ../..
+      dockerfile: services/ebay-conn-api/Dockerfile
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      EBAY_SOFT_EBAY_CONN_DB_USER: ebay_conn_api
+      EBAY_SOFT_EBAY_CONN_DB_PASSWORD: ${EBAY_SOFT_EBAY_CONN_DB_PASSWORD:-ebay_conn_api}
+      EBAY_CLIENT_ID: ${EBAY_CLIENT_ID:-dev-client-id}
+      EBAY_CLIENT_SECRET: ${EBAY_CLIENT_SECRET:-dev-client-secret-not-for-prod}
+      EBAY_REDIRECT_URI: ${EBAY_REDIRECT_URI:-https://ebay-soft.com/v1/oauth/ebay/callback}
+      EBAY_AUTHORIZE_URL: ${EBAY_AUTHORIZE_URL:-https://auth.sandbox.ebay.com/oauth2/authorize}
+      EBAY_TOKEN_URL: ${EBAY_TOKEN_URL:-https://api.sandbox.ebay.com/identity/v1/oauth2/token}
+      EBAY_SOFT_TOKEN_KEK_BASE64: ${EBAY_SOFT_TOKEN_KEK_BASE64}
+      EBAY_MARKETPLACE_DELETION_VERIFICATION_TOKEN: ${EBAY_MARKETPLACE_DELETION_VERIFICATION_TOKEN:-dev-token-replace-this-with-a-real-32plus-char-secret}
+      EBAY_MARKETPLACE_DELETION_URL: ${EBAY_MARKETPLACE_DELETION_URL:-https://ebay-soft.com/v1/ebay/marketplace-deletion}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+      OTEL_SERVICE_NAME: ebay-conn-api
+      JAVA_TOOL_OPTIONS: "-XX:+UseG1GC -XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError"
+    expose:
+      - "8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health/readiness"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 60s
