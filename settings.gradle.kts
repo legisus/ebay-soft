@@ -41,7 +41,7 @@ include("services:auth-api")
 // include("services:admin-api")
 
 // Generated OpenAPI clients
-// include("clients:auth-api-client")
+include("clients:auth-api-client")
 // include("clients:ebay-conn-api-client")
 // ...
 

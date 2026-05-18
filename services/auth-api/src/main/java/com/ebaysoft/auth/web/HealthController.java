@@ -1,5 +1,6 @@
 package com.ebaysoft.auth.web;
 
+import io.swagger.v3.oas.annotations.Operation;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class HealthController {
 
   @GetMapping("/v1/health")
+  @Operation(operationId = "getHealth", summary = "Smoke endpoint — service responding.")
   public Map<String, String> health() {
     return Map.of("status", "ok", "service", "auth-api");
   }
