@@ -13,6 +13,7 @@ name: ebay-soft
 include:
   - services/api-gateway/compose.partial.yml
   - services/auth-api/compose.partial.yml
+  - services/sync-api/compose.partial.yml
 
 networks:
   default:

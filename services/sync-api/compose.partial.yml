@@ -1,0 +1,25 @@
+services:
+  sync-api:
+    build:
+      context: ../..
+      dockerfile: services/sync-api/Dockerfile
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      EBAY_SOFT_SYNC_DB_USER: sync_api
+      EBAY_SOFT_SYNC_DB_PASSWORD: ${EBAY_SOFT_SYNC_DB_PASSWORD:-sync_api}
+      EBAY_API_BASE_URL: ${EBAY_API_BASE_URL:-https://api.sandbox.ebay.com}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+      OTEL_SERVICE_NAME: sync-api
+      JAVA_TOOL_OPTIONS: "-XX:+UseG1GC -XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError"
+    expose:
+      - "8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health/readiness"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 60s

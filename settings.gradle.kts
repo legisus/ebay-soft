@@ -33,7 +33,7 @@ listOf(
     "services:api-gateway",
     "services:auth-api",
     "services:ebay-conn-api",
-    // "services:sync-api",
+    "services:sync-api",
     // "services:accounting-api",
     // ...add as each service ships.
 ).forEach { path ->

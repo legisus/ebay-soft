@@ -40,7 +40,22 @@ public class EbayTokenClient {
     form.add("grant_type", "authorization_code");
     form.add("code", code);
     form.add("redirect_uri", props.redirectUri());
+    return postForm(form, "eBay token exchange");
+  }
 
+  /**
+   * Refreshes an access token using a stored refresh token. eBay returns a new access token only;
+   * the refresh token stays the same until it itself expires (default 18 months).
+   */
+  public Mono<EbayTokenResponse> refreshAccessToken(String refreshToken) {
+    MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+    form.add("grant_type", "refresh_token");
+    form.add("refresh_token", refreshToken);
+    form.add("scope", props.scopes());
+    return postForm(form, "eBay token refresh");
+  }
+
+  private Mono<EbayTokenResponse> postForm(MultiValueMap<String, String> form, String op) {
     return webClient
         .post()
         .uri(props.tokenUrl())
@@ -51,6 +66,6 @@ public class EbayTokenClient {
         .bodyToMono(EbayTokenResponse.class)
         .doOnNext(r -> log.atInfo()
             .addKeyValue("expiresIn", r.expiresIn())
-            .log("eBay token exchange succeeded"));
+            .log(op + " succeeded"));
   }
 }
