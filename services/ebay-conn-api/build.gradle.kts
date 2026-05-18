@@ -20,4 +20,6 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql:42.7.4")   // Flyway uses JDBC
 
     implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:2.7.0")
+
+    testImplementation("io.projectreactor:reactor-test")
 }

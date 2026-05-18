@@ -32,12 +32,13 @@ class EbayConnApplicationTest {
   @MockitoBean EbayConnectionService ebayConnectionService;
 
   @Test
-  void marketplace_deletion_handshake_echoes_the_challenge_code() {
+  void marketplace_deletion_handshake_returns_64_char_hex_sha256() {
     client.get().uri("/v1/ebay/marketplace-deletion?challenge_code=abc123")
         .exchange()
         .expectStatus().isOk()
         .expectBody()
-        .jsonPath("$.challengeResponse").isEqualTo("abc123");
+        .jsonPath("$.challengeResponse").value(
+            (Object resp) -> assertThat((String) resp).hasSize(64).matches("[0-9a-f]{64}"));
   }
 
   @Test

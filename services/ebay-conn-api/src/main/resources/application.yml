@@ -31,6 +31,11 @@ ebay-soft:
     authorize-url: ${EBAY_AUTHORIZE_URL:https://auth.sandbox.ebay.com/oauth2/authorize}
     token-url: ${EBAY_TOKEN_URL:https://api.sandbox.ebay.com/identity/v1/oauth2/token}
     scopes: ${EBAY_SCOPES:https://api.ebay.com/oauth/api_scope https://api.ebay.com/oauth/api_scope/sell.inventory.readonly https://api.ebay.com/oauth/api_scope/sell.account.readonly https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly}
+    marketplace-deletion:
+      # 32-80 char random string set in the eBay developer portal under "Alerts and Notifications".
+      # Dev default keeps boots from failing; production replaces via sealed env.
+      verification-token: ${EBAY_MARKETPLACE_DELETION_VERIFICATION_TOKEN:dev-token-replace-this-with-a-real-32plus-char-secret}
+      endpoint-url: ${EBAY_MARKETPLACE_DELETION_URL:https://ebay-soft.com/v1/ebay/marketplace-deletion}
   crypto:
     # 32-byte AES-256 KEK, base64-encoded. Default is the literal ASCII string
     # "0123456789abcdef0123456789abcdef" (exactly 32 bytes) — purely so the dev

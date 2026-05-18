@@ -3,15 +3,13 @@ package com.ebaysoft.ebay.events;
 import com.ebaysoft.events.cloudevent.CloudEvent;
 import com.ebaysoft.events.publisher.EventPublisher;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
 /**
- * Fallback {@link EventPublisher} used when no real publisher is on the context — typically a
- * test profile that excluded R2DBC. Real boots get the {@link OutboxEventPublisher}.
+ * Always-on fallback {@link EventPublisher}. Real boots also register {@link OutboxEventPublisher}
+ * with {@code @Primary}, so this one is only chosen when R2DBC isn't available (lightweight tests).
  */
 @Component
-@ConditionalOnMissingBean(value = OutboxEventPublisher.class, ignored = NoopEventPublisher.class)
 @Slf4j
 public class NoopEventPublisher implements EventPublisher {
 

@@ -9,6 +9,7 @@ import io.r2dbc.spi.Statement;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
@@ -21,6 +22,7 @@ import reactor.core.publisher.Mono;
  * application boots, not in lightweight smoke tests that excluded R2DBC autoconfig).
  */
 @Component
+@Primary
 @ConditionalOnBean(ConnectionFactory.class)
 @RequiredArgsConstructor
 @Slf4j
