@@ -3,18 +3,23 @@ services:
     build:
       context: ../..
       dockerfile: services/auth-api/Dockerfile
+    restart: unless-stopped
     environment:
-      EBAY_SOFT_AUTH_DB_URL: jdbc:postgresql://postgres:5432/ebay_soft
+      EBAY_SOFT_AUTH_DB_URL: jdbc:postgresql://postgres:5432/ebay_soft?currentSchema=auth
       EBAY_SOFT_AUTH_DB_USER: auth_api
-      EBAY_SOFT_AUTH_DB_PASSWORD: auth_api
+      EBAY_SOFT_AUTH_DB_PASSWORD: ${EBAY_SOFT_AUTH_DB_PASSWORD:-auth_api}
       EBAY_SOFT_INTERNAL_JWT_SECRET: ${EBAY_SOFT_INTERNAL_JWT_SECRET}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
-    ports:
-      - "8081:8081"
+      OTEL_SERVICE_NAME: auth-api
+      JAVA_TOOL_OPTIONS: "-XX:+UseG1GC -XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError"
+    expose:
+      - "8081"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health/readiness"]
       interval: 10s
       timeout: 3s
       retries: 10
+      start_period: 60s
