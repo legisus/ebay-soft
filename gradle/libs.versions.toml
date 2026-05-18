@@ -1,0 +1,103 @@
+# Single source of truth for dependency versions across the monorepo.
+# Bump here, every service inherits.
+
+[versions]
+# Language / toolchain
+java                  = "25"
+kotlin                = "2.1.0"
+
+# Spring
+springBoot            = "3.5.0"
+springCloud           = "2024.0.0"
+springCloudGateway    = "4.2.0"
+
+# Persistence
+flyway                = "11.3.0"
+postgresql            = "42.7.4"
+r2dbcPostgres         = "1.0.7.RELEASE"
+
+# Observability
+micrometer            = "1.14.0"
+otel                  = "1.43.0"
+logstashLogback       = "8.0"
+
+# Code generation / mapping
+mapstruct             = "1.6.3"
+lombok                = "1.18.36"
+
+# External SDKs
+stripe                = "28.0.0"
+twilio                = "10.6.0"
+
+# Test
+junit                 = "5.11.3"
+assertj               = "3.26.3"
+mockito               = "5.14.2"
+testcontainers        = "1.20.4"
+wiremock              = "3.9.2"
+archunit              = "1.3.0"
+
+# Build / quality plugins
+springDepMgmt         = "1.1.6"
+openapiGenerator      = "7.10.0"
+spotless              = "6.25.0"
+errorprone            = "4.1.0"
+ben-manes-versions    = "0.51.0"
+
+[libraries]
+# Logging
+logstash-logback-encoder = { module = "net.logstash.logback:logstash-logback-encoder",       version.ref = "logstashLogback" }
+
+# Tracing / metrics
+micrometer-tracing-otel  = { module = "io.micrometer:micrometer-tracing-bridge-otel",         version.ref = "micrometer" }
+otel-exporter-otlp       = { module = "io.opentelemetry:opentelemetry-exporter-otlp",         version.ref = "otel" }
+
+# Persistence
+flyway-postgres          = { module = "org.flywaydb:flyway-database-postgresql",              version.ref = "flyway" }
+postgresql               = { module = "org.postgresql:postgresql",                            version.ref = "postgresql" }
+r2dbc-postgres           = { module = "org.postgresql:r2dbc-postgresql",                      version.ref = "r2dbcPostgres" }
+
+# Mapping / generation
+mapstruct                = { module = "org.mapstruct:mapstruct",                              version.ref = "mapstruct" }
+mapstruct-processor      = { module = "org.mapstruct:mapstruct-processor",                    version.ref = "mapstruct" }
+lombok                   = { module = "org.projectlombok:lombok",                             version.ref = "lombok" }
+
+# External SDKs
+stripe                   = { module = "com.stripe:stripe-java",                               version.ref = "stripe" }
+twilio                   = { module = "com.twilio.sdk:twilio",                                version.ref = "twilio" }
+
+# Test
+junit-jupiter            = { module = "org.junit.jupiter:junit-jupiter",                      version.ref = "junit" }
+assertj-core             = { module = "org.assertj:assertj-core",                             version.ref = "assertj" }
+mockito-core             = { module = "org.mockito:mockito-core",                             version.ref = "mockito" }
+mockito-junit-jupiter    = { module = "org.mockito:mockito-junit-jupiter",                    version.ref = "mockito" }
+testcontainers-bom       = { module = "org.testcontainers:testcontainers-bom",                version.ref = "testcontainers" }
+testcontainers-junit     = { module = "org.testcontainers:junit-jupiter",                     version.ref = "testcontainers" }
+testcontainers-postgres  = { module = "org.testcontainers:postgresql",                        version.ref = "testcontainers" }
+wiremock-standalone      = { module = "org.wiremock:wiremock-standalone",                     version.ref = "wiremock" }
+archunit-junit5          = { module = "com.tngtech.archunit:archunit-junit5",                 version.ref = "archunit" }
+
+[bundles]
+test-base = [
+    "junit-jupiter",
+    "assertj-core",
+    "mockito-core",
+    "mockito-junit-jupiter",
+]
+test-integration = [
+    "testcontainers-junit",
+    "testcontainers-postgres",
+    "wiremock-standalone",
+]
+observability = [
+    "logstash-logback-encoder",
+    "micrometer-tracing-otel",
+    "otel-exporter-otlp",
+]
+
+[plugins]
+spring-boot         = { id = "org.springframework.boot",                    version.ref = "springBoot" }
+spring-dep-mgmt     = { id = "io.spring.dependency-management",             version.ref = "springDepMgmt" }
+openapi-generator   = { id = "org.openapi.generator",                       version.ref = "openapiGenerator" }
+spotless            = { id = "com.diffplug.spotless",                       version.ref = "spotless" }
+ben-manes-versions  = { id = "com.github.ben-manes.versions",               version.ref = "ben-manes-versions" }

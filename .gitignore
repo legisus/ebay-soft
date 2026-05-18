@@ -1,0 +1,57 @@
+# Build outputs
+.gradle/
+build/
+out/
+bin/
+**/build/
+**/out/
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Spring Boot
+*.original
+
+# Python (for ml-api)
+ml-api/.venv/
+ml-api/__pycache__/
+ml-api/.pytest_cache/
+ml-api/*.egg-info/
+
+# Frontend
+node_modules/
+dist/
+.parcel-cache/
+
+# Secrets — never commit
+*.pem
+*.key
+*.p12
+.env
+.env.*
+!.env.example
+secrets/
+**/local.properties
+
+# Coverage / reports
+.coverage
+coverage/
+htmlcov/
+
+# Misc
+.cache/
+tmp/
