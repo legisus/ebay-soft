@@ -9,3 +9,6 @@ description =
     """.trimIndent()
 
 // No production dependencies on purpose — keep this jar tiny so every service can pull it in.
+dependencies {
+    testImplementation(project(":libs:common-test"))
+}
