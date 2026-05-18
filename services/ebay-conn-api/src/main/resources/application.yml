@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: ebay-conn-api
+  r2dbc:
+    url: r2dbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/ebay_soft?schema=ebay_conn
+    username: ${EBAY_SOFT_EBAY_CONN_DB_USER:ebay_conn_api}
+    password: ${EBAY_SOFT_EBAY_CONN_DB_PASSWORD:ebay_conn_api}
+  flyway:
+    schemas: ebay_conn
+    create-schemas: true
+    default-schema: ebay_conn
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/ebay_soft
+    user: ${EBAY_SOFT_EBAY_CONN_DB_USER:ebay_conn_api}
+    password: ${EBAY_SOFT_EBAY_CONN_DB_PASSWORD:ebay_conn_api}
+
+server:
+  port: ${EBAY_SOFT_EBAY_CONN_PORT:8082}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+ebay-soft:
+  ebay:
+    client-id: ${EBAY_CLIENT_ID:dev-client-id}
+    client-secret: ${EBAY_CLIENT_SECRET:dev-client-secret-not-for-prod}
+    redirect-uri: ${EBAY_REDIRECT_URI:http://localhost:8080/v1/oauth/ebay/callback}
+    # Sandbox URLs by default; switch to production via env at deploy time.
+    authorize-url: ${EBAY_AUTHORIZE_URL:https://auth.sandbox.ebay.com/oauth2/authorize}
+    token-url: ${EBAY_TOKEN_URL:https://api.sandbox.ebay.com/identity/v1/oauth2/token}
+    scopes: ${EBAY_SCOPES:https://api.ebay.com/oauth/api_scope https://api.ebay.com/oauth/api_scope/sell.inventory.readonly https://api.ebay.com/oauth/api_scope/sell.account.readonly https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly}
