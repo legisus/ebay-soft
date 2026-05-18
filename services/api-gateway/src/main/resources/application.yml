@@ -10,6 +10,14 @@ spring:
           uri: ${EBAY_SOFT_AUTH_API_URL:http://localhost:8081}
           predicates:
             - Path=/v1/auth/**,/v1/me,/v1/health
+        - id: ebay-conn-api
+          uri: ${EBAY_SOFT_EBAY_CONN_API_URL:http://ebay-conn-api:8082}
+          predicates:
+            - Path=/v1/oauth/ebay/**,/v1/ebay/**,/v1/ebay-accounts/**
+        - id: sync-api
+          uri: ${EBAY_SOFT_SYNC_API_URL:http://sync-api:8083}
+          predicates:
+            - Path=/v1/sync/**
   data:
     redis:
       host: ${REDIS_HOST:localhost}
