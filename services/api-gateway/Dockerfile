@@ -17,6 +17,10 @@ RUN ./gradlew --no-daemon help -q || true
 
 # Now bring in everything the gateway needs: common libs + the service itself.
 COPY libs ./libs
+# clients/ is referenced by settings.gradle.kts; Gradle refuses to configure if
+# the directory is missing. It's not actually used to build the gateway, but
+# we copy it so the project tree resolves.
+COPY clients ./clients
 COPY services/api-gateway ./services/api-gateway
 
 RUN ./gradlew --no-daemon :services:api-gateway:bootJar -x test
