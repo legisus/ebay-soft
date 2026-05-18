@@ -34,8 +34,7 @@ listOf(
     "services:auth-api",
     "services:ebay-conn-api",
     "services:sync-api",
-    // "services:accounting-api",
-    // ...add as each service ships.
+    "services:accounting-api",
 ).forEach { path ->
     val dir = file(path.replace(":", "/"))
     if (dir.isDirectory) include(path)

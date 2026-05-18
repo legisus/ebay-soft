@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: accounting-api
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${EBAY_SOFT_ACCOUNTING_DB_URL:jdbc:postgresql://localhost:5432/ebay_soft}
+    username: ${EBAY_SOFT_ACCOUNTING_DB_USER:accounting_api}
+    password: ${EBAY_SOFT_ACCOUNTING_DB_PASSWORD:accounting_api}
+    hikari:
+      maximum-pool-size: 10
+      schema: accounting
+  flyway:
+    schemas: accounting
+    create-schemas: true
+    default-schema: accounting
+    locations: classpath:db/migration
+
+server:
+  port: ${EBAY_SOFT_ACCOUNTING_PORT:8084}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
