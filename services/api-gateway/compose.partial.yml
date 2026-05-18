@@ -1,0 +1,19 @@
+services:
+  api-gateway:
+    build:
+      context: ../..
+      dockerfile: services/api-gateway/Dockerfile
+    environment:
+      EBAY_SOFT_AUTH_API_URL: http://auth-api:8081
+      REDIS_HOST: redis
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+      - auth-api
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 3s
+      retries: 5

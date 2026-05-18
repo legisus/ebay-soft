@@ -28,8 +28,8 @@ include(
 
 // Services — Spring Boot apps, one per microservice.
 // Listed but not yet scaffolded; uncomment as each ships.
-// include("services:api-gateway")
-// include("services:auth-api")
+include("services:api-gateway")
+include("services:auth-api")
 // include("services:ebay-conn-api")
 // include("services:sync-api")
 // include("services:accounting-api")

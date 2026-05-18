@@ -8,13 +8,15 @@ plugins {
 }
 
 private val springBootVersion = "3.5.0"
+private val springCloudVersion = "2025.0.0"
 private val testcontainersVersion = "1.20.4"
-private val lombokVersion = "1.18.36"
+private val lombokVersion = "1.18.40"
 private val wiremockVersion = "3.9.2"
 
 dependencyManagement {
     imports {
         mavenBom("org.springframework.boot:spring-boot-dependencies:$springBootVersion")
+        mavenBom("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion")
         mavenBom("org.testcontainers:testcontainers-bom:$testcontainersVersion")
     }
 }
