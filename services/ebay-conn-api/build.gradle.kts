@@ -22,4 +22,5 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:2.7.0")
 
     testImplementation("io.projectreactor:reactor-test")
+    testImplementation(project(":libs:common-test"))
 }

@@ -19,4 +19,5 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql:42.7.4")
 
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0")
+    testImplementation(project(":libs:common-test"))
 }

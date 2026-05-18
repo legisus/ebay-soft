@@ -20,4 +20,5 @@ dependencies {
     implementation("org.flywaydb:flyway-core:11.3.0")
     implementation("org.flywaydb:flyway-database-postgresql:11.3.0")
     runtimeOnly("org.postgresql:postgresql:42.7.4")
+    testImplementation(project(":libs:common-test"))
 }
