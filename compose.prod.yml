@@ -15,6 +15,7 @@ include:
   - services/auth-api/compose.partial.yml
   - services/ebay-conn-api/compose.partial.yml
   - services/sync-api/compose.partial.yml
+  - services/accounting-api/compose.partial.yml
 
 networks:
   default:

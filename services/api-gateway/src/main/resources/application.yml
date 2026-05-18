@@ -18,6 +18,10 @@ spring:
           uri: ${EBAY_SOFT_SYNC_API_URL:http://sync-api:8083}
           predicates:
             - Path=/v1/sync/**
+        - id: accounting-api
+          uri: ${EBAY_SOFT_ACCOUNTING_API_URL:http://accounting-api:8084}
+          predicates:
+            - Path=/v1/pnl/**,/v1/exports/**,/v1/cogs/**
   data:
     redis:
       host: ${REDIS_HOST:localhost}
