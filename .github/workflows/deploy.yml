@@ -1,0 +1,86 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:                # manual re-deploy from the Actions tab
+
+# Never run two deploys in parallel against the same box.
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Pull + build + recreate on Hetzner
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    # Public-repo safety: never run on forks or PR runs (they can't have the secret anyway,
+    # but the explicit gate is documentation).
+    if: github.repository == 'legisus/ebay-soft'
+    environment:
+      name: production
+      url: https://ebay-soft.com/v1/health
+    steps:
+      - name: Authorize SSH agent with deploy key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
+
+      - name: Pin host key (prevent MITM on first connection)
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          # Captured 2026-05-18 — rotate if Hetzner reinstalls the box.
+          echo "${{ secrets.HETZNER_SSH_HOST }} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIpMx7Z3Sg/mLxT2YBhbyiateIsqpgL5yz0hLIlHzCmT" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy
+        env:
+          HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          USER: ${{ secrets.HETZNER_SSH_USER }}
+        run: |
+          # Single SSH session keeps every step in the same shell — cheaper and
+          # easier to reason about than 6 separate ssh calls.
+          ssh -o BatchMode=yes "$USER@$HOST" bash -eux <<'SCRIPT'
+            cd /opt/ebay-soft
+            git fetch origin --prune
+            git checkout main
+            git pull --ff-only origin main
+
+            # Build any service whose source changed (Docker layer cache handles the rest).
+            docker compose -f compose.prod.yml --env-file /etc/ebay-soft/env build --pull
+
+            # Recreate containers whose image hash moved. --remove-orphans keeps the
+            # compose state clean when we remove a service from the include list.
+            docker compose -f compose.prod.yml --env-file /etc/ebay-soft/env up -d --remove-orphans
+
+            # Prune dangling images from the build, but keep one previous tag for rollback.
+            docker image prune --filter "until=24h" -f >/dev/null
+          SCRIPT
+
+      - name: Wait for health
+        env:
+          BASE: https://ebay-soft.com
+        run: |
+          set -e
+          # Allow up to 90s for newly recreated containers to pass their readiness probes.
+          for path in /v1/health /v1/sync/status?tenantId=11111111-1111-1111-1111-111111111111 /v1/oauth/ebay/start; do
+            echo "Probing $BASE$path"
+            for attempt in $(seq 1 18); do
+              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 "$BASE$path")
+              if [ "$code" = "200" ]; then echo "  OK ($code)"; break; fi
+              if [ "$attempt" -eq 18 ]; then echo "  FAIL after 90s — last code $code" >&2; exit 1; fi
+              sleep 5
+            done
+          done
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Deploy result"
+            echo "- ref: ${GITHUB_REF}"
+            echo "- sha: ${GITHUB_SHA}"
+            echo "- host: ${{ secrets.HETZNER_SSH_HOST }}"
+            echo "- live: https://ebay-soft.com/v1/health"
+          } >> "$GITHUB_STEP_SUMMARY"
