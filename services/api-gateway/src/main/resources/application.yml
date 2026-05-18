@@ -9,7 +9,7 @@ spring:
         - id: auth-api
           uri: ${EBAY_SOFT_AUTH_API_URL:http://localhost:8081}
           predicates:
-            - Path=/v1/auth/**,/v1/me
+            - Path=/v1/auth/**,/v1/me,/v1/health
   data:
     redis:
       host: ${REDIS_HOST:localhost}

@@ -50,18 +50,26 @@ services:
       retries: 10
 
   traefik:
-    image: traefik:v3.2
+    image: traefik:v3.5
+    restart: unless-stopped
     command:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=ebay-soft
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
       - --api.dashboard=true
-      - --api.insecure=true   # dev-only — disable in real prod
+      - --api.insecure=true   # dev-only — disable behind auth in real prod
+      - --log.level=INFO
+      - --accesslog=true
+    environment:
+      # Pin the Docker API version traefik talks to — without this, traefik 3.x
+      # defaults to a version newer Docker daemons (29+) refuse.
+      DOCKER_API_VERSION: "1.45"
     ports:
       - "80:80"
       - "443:443"
-      - "8090:8080"           # dashboard
+      - "8090:8080"           # dashboard; blocked externally by DOCKER-USER iptables
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
