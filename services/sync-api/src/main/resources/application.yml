@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: sync-api
+  r2dbc:
+    url: r2dbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/ebay_soft?schema=sync
+    username: ${EBAY_SOFT_SYNC_DB_USER:sync_api}
+    password: ${EBAY_SOFT_SYNC_DB_PASSWORD:sync_api}
+  flyway:
+    schemas: sync
+    create-schemas: true
+    default-schema: sync
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/ebay_soft
+    user: ${EBAY_SOFT_SYNC_DB_USER:sync_api}
+    password: ${EBAY_SOFT_SYNC_DB_PASSWORD:sync_api}
+
+server:
+  port: ${EBAY_SOFT_SYNC_PORT:8083}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+ebay-soft:
+  sync:
+    ebay:
+      base-url: ${EBAY_API_BASE_URL:https://api.sandbox.ebay.com}
+      max-connections: 200
+      connect-timeout: PT5S
+      read-timeout: PT30S
+      per-tenant-permits-per-second: 5
+      per-tenant-burst: 20
+      retry-max-attempts: 4
+      retry-base-backoff: PT1S

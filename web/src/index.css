@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+/*
+ * ebay-soft design tokens. Closer to Bloomberg / QuickBooks than to a generic
+ * Tailwind landing page — see docs/FRONTEND.md → Design language.
+ *
+ * Dense by default, dark-mode primary, tabular numerics everywhere money lives.
+ */
+
+@theme {
+  --color-background: #0b0d10;
+  --color-foreground: #e7e9ec;
+  --color-muted: #14171c;
+  --color-muted-foreground: #8a93a0;
+  --color-border: #1e242c;
+  --color-accent: #ffb000;        /* terminal-amber for emphasis */
+  --color-accent-foreground: #0b0d10;
+  --color-positive: #22c55e;      /* profit-green */
+  --color-negative: #ef4444;      /* loss-red */
+  --color-card: #11151b;
+
+  --font-sans: "Inter Variable", "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Berkeley Mono", "SF Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  html, body {
+    height: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;     /* money columns align */
+    background: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  /* Numeric cells in tables: monospaced, tabular */
+  .num, td.num, .font-numeric {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}

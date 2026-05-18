@@ -1,0 +1,66 @@
+openapi: 3.1.0
+info:
+  title: auth-api
+  description: |
+    Tenants, users, sessions, MFA enrolments (passkey/TOTP/SMS), JWT issuance.
+    Source of truth — services and clients are generated from this file.
+    See docs/ARCHITECTURE.md for the role auth-api plays in the platform.
+  version: 0.1.0
+  contact:
+    name: ebay-soft
+    url: https://github.com/legisus/ebay-soft
+
+servers:
+  - url: https://ebay-soft.com/v1
+    description: Production
+  - url: https://staging.ebay-soft.com/v1
+    description: Staging
+  - url: http://localhost:8081/v1
+    description: Local dev (direct, no gateway)
+
+tags:
+  - name: health
+    description: Liveness probes — temporary, removed once /v1/auth/* lands.
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      operationId: getHealth
+      summary: Smoke endpoint — service responding.
+      responses:
+        "200":
+          description: Service is up.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, service]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        service:
+          type: string
+          example: auth-api
+
+    Problem:
+      description: RFC 7807 Problem Details.
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string

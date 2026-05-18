@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: ebay-conn-api
+  r2dbc:
+    url: r2dbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/ebay_soft?schema=ebay_conn
+    username: ${EBAY_SOFT_EBAY_CONN_DB_USER:ebay_conn_api}
+    password: ${EBAY_SOFT_EBAY_CONN_DB_PASSWORD:ebay_conn_api}
+  flyway:
+    schemas: ebay_conn
+    create-schemas: true
+    default-schema: ebay_conn
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/ebay_soft
+    user: ${EBAY_SOFT_EBAY_CONN_DB_USER:ebay_conn_api}
+    password: ${EBAY_SOFT_EBAY_CONN_DB_PASSWORD:ebay_conn_api}
+
+server:
+  port: ${EBAY_SOFT_EBAY_CONN_PORT:8082}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+ebay-soft:
+  ebay:
+    client-id: ${EBAY_CLIENT_ID:dev-client-id}
+    client-secret: ${EBAY_CLIENT_SECRET:dev-client-secret-not-for-prod}
+    redirect-uri: ${EBAY_REDIRECT_URI:http://localhost:8080/v1/oauth/ebay/callback}
+    # Sandbox URLs by default; switch to production via env at deploy time.
+    authorize-url: ${EBAY_AUTHORIZE_URL:https://auth.sandbox.ebay.com/oauth2/authorize}
+    token-url: ${EBAY_TOKEN_URL:https://api.sandbox.ebay.com/identity/v1/oauth2/token}
+    scopes: ${EBAY_SCOPES:https://api.ebay.com/oauth/api_scope https://api.ebay.com/oauth/api_scope/sell.inventory.readonly https://api.ebay.com/oauth/api_scope/sell.account.readonly https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly}
+    marketplace-deletion:
+      # 32-80 char random string set in the eBay developer portal under "Alerts and Notifications".
+      # Dev default keeps boots from failing; production replaces via sealed env.
+      verification-token: ${EBAY_MARKETPLACE_DELETION_VERIFICATION_TOKEN:dev-token-replace-this-with-a-real-32plus-char-secret}
+      endpoint-url: ${EBAY_MARKETPLACE_DELETION_URL:https://ebay-soft.com/v1/ebay/marketplace-deletion}
+  crypto:
+    # 32-byte AES-256 KEK, base64-encoded. Default is the literal ASCII string
+    # "0123456789abcdef0123456789abcdef" (exactly 32 bytes) — purely so the dev
+    # boot doesn't crash. Production replaces this via a sealed env var.
+    token-kek-base64: ${EBAY_SOFT_TOKEN_KEK_BASE64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}

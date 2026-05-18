@@ -1,0 +1,47 @@
+# Traefik dynamic config — file provider. Hot-reloaded by traefik when this file
+# changes. One router block per (service × entryPoint).
+
+http:
+  routers:
+    # HTTP → 308 redirect to HTTPS. Survives until we move the redirect to
+    # Cloudflare Page Rules (cheaper, fewer round-trips).
+    api-gateway-redirect:
+      rule: "PathPrefix(`/`)"
+      entryPoints: ["web"]
+      middlewares: ["to-https"]
+      service: noop                  # never reached; middleware short-circuits
+      priority: 1
+
+    api-gateway:
+      rule: "PathPrefix(`/v1`) || PathPrefix(`/actuator`)"
+      entryPoints: ["websecure"]
+      service: api-gateway
+      tls: {}
+
+  middlewares:
+    to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+  services:
+    api-gateway:
+      loadBalancer:
+        servers:
+          - url: "http://api-gateway:8080"
+        passHostHeader: true
+        healthCheck:
+          path: /actuator/health/readiness
+          interval: 10s
+          timeout: 3s
+
+    # Stub used by the redirect router; never receives traffic.
+    noop:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:1"
+
+tls:
+  certificates:
+    - certFile: /etc/traefik/certs/ebay-soft.com.pem
+      keyFile:  /etc/traefik/certs/ebay-soft.com.key

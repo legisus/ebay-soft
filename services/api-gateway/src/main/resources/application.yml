@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+      routes:
+        - id: auth-api
+          uri: ${EBAY_SOFT_AUTH_API_URL:http://localhost:8081}
+          predicates:
+            - Path=/v1/auth/**,/v1/me,/v1/health
+        - id: ebay-conn-api
+          uri: ${EBAY_SOFT_EBAY_CONN_API_URL:http://ebay-conn-api:8082}
+          predicates:
+            - Path=/v1/oauth/ebay/**,/v1/ebay/**,/v1/ebay-accounts/**
+        - id: sync-api
+          uri: ${EBAY_SOFT_SYNC_API_URL:http://sync-api:8083}
+          predicates:
+            - Path=/v1/sync/**
+        - id: accounting-api
+          uri: ${EBAY_SOFT_ACCOUNTING_API_URL:http://accounting-api:8084}
+          predicates:
+            - Path=/v1/pnl/**,/v1/exports/**,/v1/cogs/**
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+server:
+  port: ${EBAY_SOFT_GATEWAY_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO

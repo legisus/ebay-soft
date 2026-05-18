@@ -1,0 +1,2 @@
+com.ebaysoft.web.money.MoneyJacksonAutoConfiguration
+com.ebaysoft.web.errors.ProblemDetailAutoConfiguration

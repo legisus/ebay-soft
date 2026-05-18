@@ -1,0 +1,199 @@
+# Infrastructure — Hetzner dedicated
+
+## Server choice
+
+Start with one box from the **Hetzner AX-line** (AMD Ryzen) in **Falkenstein** or **Helsinki** (cheaper power, EU jurisdiction).
+
+Hetzner publishes prices in EUR; we list both since the contract is denominated in EUR even though our base reporting currency is USD ([MONETIZATION.md](MONETIZATION.md)).
+
+| Model        | CPU                          | RAM     | Storage              | Price (Mar 2026 ballpark) | Good for                            |
+|--------------|------------------------------|---------|----------------------|----------------------------|--------------------------------------|
+| AX42         | Ryzen 7 7700, 8C/16T         | 64 GB   | 2 × 1 TB NVMe        | €60–€80 (~$65–$85)/mo      | MVP, 0–200 paying customers          |
+| AX52         | Ryzen 7 7700, 8C/16T         | 64 GB   | 2 × 1 TB NVMe        | similar tier               | Same as AX42, swap when available    |
+| **AX102**    | Ryzen 9 7950X3X, 16C/32T     | 128 GB  | 2 × 1.92 TB NVMe     | €130–€150 (~$140–$160)/mo  | **Recommended start** — headroom to 1k+ |
+| EX44 (low-cost) | i5-13500, 14C/20T         | 64 GB   | 2 × 512 GB NVMe      | €40 (~$43)/mo              | Budget option if cash is tight       |
+
+**Pick AX102**. The extra cores and RAM cover us through year one, the cost difference vs AX42 is small, and resizing dedicated boxes is downtime.
+
+Add later:
+
+- A second AX-class box for warm standby (Postgres replica + ready-to-take-over app), once we cross ~$10k MRR.
+- **Hetzner Storage Box** (5 TB ~€13 / ~$14/mo) for off-site backups.
+- Hetzner Cloud (vCPU instances) for ML workers if they get spiky.
+
+## Network
+
+- **Cloudflare** in front: DNS, TLS termination at edge (optional — we also do TLS on the server), WAF rules for common patterns, rate limiting on `/api/auth/*`, bot detection, CDN for static assets.
+- Cloudflare Tunnel from the server back to Cloudflare — means we don't expose ports 80/443 directly to the internet (no IP allowlist needed for the public). Optional, but reduces attack surface meaningfully.
+- SSH on a non-standard port + key-only + fail2ban + IP allowlist if practical.
+
+## OS & base setup
+
+- **Ubuntu 24.04 LTS** (or Debian 12) — boring, well-supported.
+- **LUKS** full-disk encryption on the data partition (we pay the small perf cost for the at-rest guarantee).
+- Unattended-upgrades for security packages.
+- **UFW** firewall: deny all incoming except SSH (custom port, allowlist), 80/443 from Cloudflare IP ranges only.
+- Automatic SSH key rotation runbook documented.
+
+## Container topology
+
+Single-box Docker Compose for MVP — but **one container per service**. Each service has its own image, version tag, and lifecycle. No Kubernetes until we have a reason.
+
+```yaml
+# compose.prod.yml (abbreviated)
+services:
+  traefik:
+    image: traefik:3
+    # TLS via Let's Encrypt or pass-through from Cloudflare
+
+  # ── shared infra ────────────────────────────────────
+  postgres:
+    image: postgres:17
+    volumes: [pgdata:/var/lib/postgresql/data]
+    deploy: { resources: { limits: { memory: 24g } } }
+  pgbouncer:
+    image: edoburu/pgbouncer
+  redis:
+    image: redis:7-alpine
+  minio:
+    image: minio/minio
+    command: server /data
+    volumes: [miniodata:/data]
+
+  # ── REST services (one container each) ──────────────
+  api-gateway:
+    image: registry.example.com/ebay-soft/api-gateway:${API_GATEWAY_SHA}
+    labels: ["traefik.http.routers.api.rule=Host(`api.ebay-soft.com`)"]
+  auth-api:
+    image: registry.example.com/ebay-soft/auth-api:${AUTH_API_SHA}
+  ebay-conn-api:
+    image: registry.example.com/ebay-soft/ebay-conn-api:${EBAY_CONN_API_SHA}
+  sync-api:
+    image: registry.example.com/ebay-soft/sync-api:${SYNC_API_SHA}
+  accounting-api:
+    image: registry.example.com/ebay-soft/accounting-api:${ACCOUNTING_API_SHA}
+  inventory-api:
+    image: registry.example.com/ebay-soft/inventory-api:${INVENTORY_API_SHA}
+  repricer-api:
+    image: registry.example.com/ebay-soft/repricer-api:${REPRICER_API_SHA}
+  analytics-api:
+    image: registry.example.com/ebay-soft/analytics-api:${ANALYTICS_API_SHA}
+  notif-api:
+    image: registry.example.com/ebay-soft/notif-api:${NOTIF_API_SHA}
+  billing-api:
+    image: registry.example.com/ebay-soft/billing-api:${BILLING_API_SHA}
+  admin-api:
+    image: registry.example.com/ebay-soft/admin-api:${ADMIN_API_SHA}
+  ml-api:
+    image: registry.example.com/ebay-soft/ml-api:${ML_API_SHA}
+
+  # ── static frontend ─────────────────────────────────
+  web:
+    image: registry.example.com/ebay-soft/web:${WEB_SHA}
+    labels: ["traefik.http.routers.web.rule=Host(`app.ebay-soft.com`)"]
+
+  # ── observability ───────────────────────────────────
+  prometheus:  { image: prom/prometheus }
+  grafana:    { image: grafana/grafana }
+  loki:        { image: grafana/loki }
+  promtail:    { image: grafana/promtail }
+  tempo:       { image: grafana/tempo }
+```
+
+The root `compose.prod.yml` is generated by concatenating each service's `compose.partial.yml` — every service contributes its own block, keeping ownership clear.
+
+Resource ceiling on AX102 (128 GB RAM, 16 vCPU):
+
+| Group                                                | RAM cap | CPU cap |
+|------------------------------------------------------|---------|---------|
+| Postgres                                             | 24 GB   | 6       |
+| Redis                                                | 4 GB    | 2       |
+| MinIO                                                | 4 GB    | 2       |
+| 11 Java services (avg 4 GB / 1 vCPU each)            | ~44 GB  | ~11     |
+| ml-api (Python)                                      | 8 GB    | 3       |
+| Grafana / Loki / Tempo / Prometheus / Promtail       | 6 GB    | 2       |
+| Headroom                                             | ~38 GB  | —       |
+
+A "JVM service idle" baseline of ~250–400 MB is realistic with `-XX:+UseZGC -Xmx1g` per service plus virtual threads; the 4 GB cap is generous. The AX102 has plenty of headroom for 11 services + observability stack.
+
+To save further memory if it ever matters: build services as **GraalVM native images** (Spring Boot 3.5 supports this); a native binary uses ~80 MB instead of 400 MB. We don't do this at MVP — the JVM works fine and `native-image` builds are slow.
+
+## Deployment
+
+CI/CD pipelines, per-service release flow, contract-test gating, and the dev/stg/prod environment split are owned by [ENVIRONMENTS.md](ENVIRONMENTS.md). The summary, as it lands on this box:
+
+- **Independent per-service deploys** — each service has its own Docker image tag; `docker compose up -d <service>` rolls one without touching the others.
+- **CD target** — Ansible playbook over SSH, triggered by GitHub Actions on a release tag. No fleet-wide rollback step; per-service rollback is one compose command with the previous SHA.
+- **Per-service downtime budget** — 5–10 s of gateway 503 for one route during restart. SPA shows a friendly "retrying" state. We re-evaluate when MRR justifies per-service blue/green.
+- **Migrations** — Flyway runs at each service's startup against its own schema. Schema changes follow **expand → migrate → contract** so release N and N-1 of the same service can run concurrently during rollout.
+
+## Monitoring
+
+The full observability pipeline — what every service emits, the dashboards we ship, the alerting rules, the on-call workflow — lives in [OBSERVABILITY.md](OBSERVABILITY.md). Tool summary for this box:
+
+| Concern         | Tool                                          |
+|-----------------|-----------------------------------------------|
+| Metrics         | Prometheus, Grafana dashboards                |
+| Logs            | Loki + Promtail (JSON stdout)                 |
+| Errors          | Sentry (Team plan, hosted — not self-hosted)  |
+| Uptime          | UptimeRobot or BetterStack — multi-region pings to `/actuator/health` |
+| Synthetic       | Playwright cron from GH Actions hitting login + dashboard |
+| Tracing         | Tempo (self-hosted) — Grafana Cloud free tier rejected to keep data in EU |
+| Alerting        | Grafana → Telegram bot + email + PagerDuty (when staffed 24/7) |
+
+Alerts that page someone:
+
+- 5xx error rate >1% over 5 min
+- p95 API latency >2s over 5 min
+- DB connection saturation >80%
+- Disk >85%
+- Cert expiring in <14 days
+
+Alerts that file a ticket (not page):
+
+- Daily sync job duration regressed >50% week-over-week
+- eBay 429 rate > 10/hour
+
+## Backups
+
+| What                | Frequency  | Where                                  | Retention                                |
+|---------------------|------------|-----------------------------------------|------------------------------------------|
+| Postgres `pg_dump`  | Hourly     | Local + Hetzner Storage Box             | 24h local, 30d offsite                   |
+| Postgres WAL        | Continuous | Storage Box                             | 7d PITR                                  |
+| MinIO (objects)     | Daily      | Storage Box + Backblaze B2              | 90d                                      |
+| Configs / secrets   | On change  | Encrypted git repo (sops + age)         | Forever                                  |
+| Server image        | Weekly     | Hetzner Snapshot                        | 4 weeks                                  |
+
+**Restore drill: quarterly.** Untested backups are not backups. Pick a random Wednesday, spin up a fresh server, restore, verify.
+
+## Disaster recovery
+
+- RPO: 1 hour (we lose at most the last hour of data).
+- RTO: 4 hours (we can rebuild on a new box in 4 hours).
+- Documented runbook in `/ops/runbooks/disaster-recovery.md`, executed by someone unfamiliar with the system at least twice a year.
+
+## Secrets management
+
+The repo is public (BSL), so secret hygiene is a hard requirement, not a guideline. Full policy in [SECURITY.md → Secrets](SECURITY.md#secrets). The shape on this box:
+
+- Encrypted `infra/secrets/{dev,stg,prod}.enc.yml` checked into the repo (sops + age). Only the ciphertext is in git.
+- Plaintext lives only in two places: the founder's password manager, and `/root/.age/server.key` on the Hetzner box (mode `0600`, owned by root, off-VCS).
+- At deploy time, an Ansible task decrypts the sealed file and feeds it to `docker compose` via `--env-file /dev/stdin`. Plaintext never touches the box's disk.
+- Multi-line secrets (JWT private keys, eBay KEK material) get materialized as files under `/run/secrets/<name>` with mode `0400`, owned by the service's UID, mounted into the container.
+- Day N (team >2): migrate to **Hashicorp Vault** or **Infisical**, self-hosted on the same box, sealed with an unseal-key quorum.
+
+## Domain & email
+
+- Domain: **ebay-soft.com** (the target purchase).
+- Email-sending: Postmark or Resend ($10–$30/mo at our volume). DKIM, SPF, DMARC strict.
+- Inbound: catch-all → Fastmail or self-hosted Stalwart.
+
+## Compliance posture
+
+- **GDPR** — Hetzner Falkenstein keeps data in the EU. DPA available from Hetzner. We sign DPAs with sub-processors (Stripe, Cloudflare, Postmark).
+- **PCI** — Stripe Checkout means we never touch card data. SAQ-A only.
+- **eBay Marketplace Account Deletion Notification** — implemented as a public HTTPS endpoint, validated, monitored.
+
+## Cost ceiling — when do we leave Hetzner?
+
+The AX102 plus replica plus storage covers us comfortably to **~2,000 paying customers / ~$80k MRR**. Beyond that we revisit: cloud (AWS / GCP) buys us global edge and managed services but at 3–5× the cost. We don't move until customer demand (regulatory residency in non-EU regions, enterprise contracts requiring SOC 2 with specific controls) forces it.
