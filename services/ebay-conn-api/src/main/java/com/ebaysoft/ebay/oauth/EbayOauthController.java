@@ -5,19 +5,19 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
 /**
- * Owns the OAuth 2.0 authorization-code flow with eBay. Phase 1 ships {@code /start} (returns the
- * authorize URL) and {@code /callback} (exchanges the code for tokens and stores them encrypted).
- *
- * <p>Issue #36. Token exchange + persistence land in the next commit; this commit covers the
- * scaffolding + the start endpoint that mints a CSRF state and constructs the eBay URL.
+ * Owns the OAuth 2.0 authorization-code flow with eBay: {@code /start} returns the authorize URL,
+ * {@code /callback} exchanges the code for tokens, encrypts the refresh token, persists the
+ * account, and publishes {@code ebay_account.connected} via the outbox.
  */
 @RestController
 @RequestMapping("/v1/oauth/ebay")
@@ -27,6 +27,7 @@ public class EbayOauthController {
 
   private static final SecureRandom RNG = new SecureRandom();
   private final EbayProperties props;
+  private final EbayConnectionService connectionService;
 
   @GetMapping("/start")
   public Mono<StartResponse> start() {
@@ -42,7 +43,25 @@ public class EbayOauthController {
     return Mono.just(new StartResponse(url, state));
   }
 
-  /** {@code state} is HMAC-signed in the callback once we wire up the session store. */
+  /**
+   * eBay redirects the seller here with {@code ?code=...&state=...}. For Phase 1 we accept
+   * tenantId/marketplaceId/ebayUserId as query params so the flow is testable; once the SPA flow
+   * lands, state is HMAC-signed and carries tenantId, and the user-info comes from eBay's
+   * {@code /commerce/identity/v1/user} call.
+   */
+  @GetMapping("/callback")
+  public Mono<CallbackResponse> callback(
+      @RequestParam String code,
+      @RequestParam String state,
+      @RequestParam("tenantId") UUID tenantId,
+      @RequestParam("marketplaceId") String marketplaceId,
+      @RequestParam("ebayUserId") String ebayUserId) {
+    log.atInfo().addKeyValue("state", state).log("eBay callback received");
+    return connectionService
+        .complete(code, tenantId, marketplaceId, ebayUserId)
+        .map(account -> new CallbackResponse(account.id().toString(), "connected"));
+  }
+
   private static String newState() {
     byte[] buf = new byte[24];
     RNG.nextBytes(buf);
@@ -54,4 +73,6 @@ public class EbayOauthController {
   }
 
   public record StartResponse(String authorizeUrl, String state) {}
+
+  public record CallbackResponse(String ebayAccountId, String status) {}
 }

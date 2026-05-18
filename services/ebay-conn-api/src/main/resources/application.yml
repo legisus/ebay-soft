@@ -31,3 +31,8 @@ ebay-soft:
     authorize-url: ${EBAY_AUTHORIZE_URL:https://auth.sandbox.ebay.com/oauth2/authorize}
     token-url: ${EBAY_TOKEN_URL:https://api.sandbox.ebay.com/identity/v1/oauth2/token}
     scopes: ${EBAY_SCOPES:https://api.ebay.com/oauth/api_scope https://api.ebay.com/oauth/api_scope/sell.inventory.readonly https://api.ebay.com/oauth/api_scope/sell.account.readonly https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly}
+  crypto:
+    # 32-byte AES-256 KEK, base64-encoded. Default is the literal ASCII string
+    # "0123456789abcdef0123456789abcdef" (exactly 32 bytes) — purely so the dev
+    # boot doesn't crash. Production replaces this via a sealed env var.
+    token-kek-base64: ${EBAY_SOFT_TOKEN_KEK_BASE64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
