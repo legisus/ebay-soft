@@ -70,6 +70,9 @@ services:
       - "8090:8080"           # dashboard; blocked externally by DOCKER-USER iptables
     volumes:
       - ./infra/traefik:/etc/traefik/dynamic:ro
+      # Cloudflare Origin Cert + key — bind-mounted read-only from host.
+      # Files live at /etc/ebay-soft/certs/ on the host, never in this repo.
+      - /etc/ebay-soft/certs:/etc/traefik/certs:ro
 
   # Observability — see infra/observability/* for configs
   tempo:
