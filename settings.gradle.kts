@@ -27,10 +27,19 @@ include(
 )
 
 // Services — Spring Boot apps, one per microservice.
-// Listed but not yet scaffolded; uncomment as each ships.
-include("services:api-gateway")
-include("services:auth-api")
-include("services:ebay-conn-api")
+// Each entry is *opt-in* when its directory exists, so a Docker build that copies only
+// a single service still configures cleanly.
+listOf(
+    "services:api-gateway",
+    "services:auth-api",
+    "services:ebay-conn-api",
+    // "services:sync-api",
+    // "services:accounting-api",
+    // ...add as each service ships.
+).forEach { path ->
+    val dir = file(path.replace(":", "/"))
+    if (dir.isDirectory) include(path)
+}
 // include("services:ebay-conn-api")
 // include("services:sync-api")
 // include("services:accounting-api")
@@ -41,10 +50,14 @@ include("services:ebay-conn-api")
 // include("services:billing-api")
 // include("services:admin-api")
 
-// Generated OpenAPI clients
-include("clients:auth-api-client")
-// include("clients:ebay-conn-api-client")
-// ...
+// Generated OpenAPI clients — same opt-in pattern as services.
+listOf(
+    "clients:auth-api-client",
+    // "clients:ebay-conn-api-client",
+).forEach { path ->
+    val dir = file(path.replace(":", "/"))
+    if (dir.isDirectory) include(path)
+}
 
 rootProject.children.forEach { renameBuildFileToMatchProject(it) }
 

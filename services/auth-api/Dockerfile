@@ -12,13 +12,9 @@ COPY buildSrc ./buildSrc
 RUN ./gradlew --no-daemon help -q || true
 
 COPY libs ./libs
-# clients/ is referenced by settings.gradle.kts; Gradle refuses to configure if
-# the directory is missing.
-COPY clients ./clients
-# auth-api's openapi.yaml is the source used by clients/auth-api-client at
-# generate time — copy the spec separately so openApiGenerate is reproducible.
 COPY services/auth-api ./services/auth-api
 
+# settings.gradle.kts opt-in-by-directory means we only need libs + this one service.
 RUN ./gradlew --no-daemon :services:auth-api:bootJar -x test
 
 # ---------- runtime ----------
