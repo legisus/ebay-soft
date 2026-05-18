@@ -1,0 +1,112 @@
+# Production-like Docker Compose stack — one declaration per service partial.
+# Each services/<svc>/compose.partial.yml owns its own block; this root file
+# composes them together with the shared infra (postgres / redis / traefik /
+# observability). Spin up locally with:
+#
+#     docker compose -f compose.prod.yml up -d
+#
+# Service count grows phase-by-phase. Add the next partial under `include:`
+# when the service ships its compose.partial.yml.
+
+name: ebay-soft
+
+include:
+  - services/api-gateway/compose.partial.yml
+  - services/auth-api/compose.partial.yml
+
+networks:
+  default:
+    name: ebay-soft
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ebay_soft
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  traefik:
+    image: traefik:v3.2
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --api.dashboard=true
+      - --api.insecure=true   # dev-only — disable in real prod
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8090:8080"           # dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  # Observability — see infra/observability/* for configs
+  tempo:
+    image: grafana/tempo:2.6.1
+    command: ["-config.file=/etc/tempo.yml"]
+    volumes:
+      - ./infra/observability/tempo.yml:/etc/tempo.yml:ro
+      - tempo_data:/var/tempo
+    ports:
+      - "3200:3200"
+      - "4317:4317"   # OTLP gRPC
+
+  loki:
+    image: grafana/loki:3.3.0
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - loki_data:/loki
+
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    volumes:
+      - ./infra/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+
+volumes:
+  postgres_data:
+  redis_data:
+  tempo_data:
+  loki_data:
+  prometheus_data:
+  grafana_data:
