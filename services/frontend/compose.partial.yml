@@ -1,0 +1,17 @@
+services:
+  frontend:
+    image: ghcr.io/legisus/ebay-soft-frontend:latest
+    build:
+      context: ../..
+      dockerfile: services/frontend/Dockerfile
+    restart: unless-stopped
+    # nginx is tiny; 128 MB is comfortable headroom on the small box.
+    mem_limit: 128m
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s

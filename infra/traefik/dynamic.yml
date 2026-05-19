@@ -18,6 +18,15 @@ http:
       service: api-gateway
       tls: {}
 
+    # Everything else on HTTPS hits the SPA. Lower-priority `PathPrefix("/")`
+    # means /v1 and /actuator still win — Traefik picks the more specific rule.
+    frontend:
+      rule: "PathPrefix(`/`)"
+      entryPoints: ["websecure"]
+      service: frontend
+      tls: {}
+      priority: 1
+
   middlewares:
     to-https:
       redirectScheme:
@@ -32,6 +41,16 @@ http:
         passHostHeader: true
         healthCheck:
           path: /actuator/health/readiness
+          interval: 10s
+          timeout: 3s
+
+    frontend:
+      loadBalancer:
+        servers:
+          - url: "http://frontend:80"
+        passHostHeader: true
+        healthCheck:
+          path: /healthz
           interval: 10s
           timeout: 3s
 

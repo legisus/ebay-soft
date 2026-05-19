@@ -43,7 +43,7 @@ jobs:
           MANUAL: ${{ github.event.inputs.services }}
         run: |
           set -e
-          ALL='["auth-api","ebay-conn-api","sync-api","accounting-api","api-gateway"]'
+          ALL='["auth-api","ebay-conn-api","sync-api","accounting-api","api-gateway","frontend"]'
 
           if [ -n "$MANUAL" ]; then
             list=$(echo "$MANUAL" | tr ',' '\n' | sed '/^$/d' | jq -R . | jq -sc .)

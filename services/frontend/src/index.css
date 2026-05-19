@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+/* Form rows + form-control look — kept minimal so we can iterate per page. */
+.field {
+  @apply mt-3 block w-full rounded-md border border-slate-300 bg-white px-3 py-2
+         text-sm shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1
+         focus:ring-slate-500;
+}
+.label {
+  @apply block text-sm font-medium text-slate-700;
+}
+.btn-primary {
+  @apply inline-flex w-full justify-center rounded-md bg-slate-900 px-3 py-2
+         text-sm font-semibold text-white shadow-sm hover:bg-slate-800
+         focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
+         focus-visible:outline-slate-900 disabled:cursor-not-allowed disabled:opacity-60;
+}
+.btn-link {
+  @apply text-sm font-medium text-slate-700 hover:underline;
+}
