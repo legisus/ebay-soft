@@ -1,16 +1,18 @@
 services:
   accounting-api:
+    image: ghcr.io/legisus/ebay-soft-accounting-api:latest
     build:
       context: ../..
       dockerfile: services/accounting-api/Dockerfile
     restart: unless-stopped
+    mem_limit: 700m
     environment:
       EBAY_SOFT_ACCOUNTING_DB_URL: jdbc:postgresql://postgres:5432/ebay_soft?currentSchema=accounting
       EBAY_SOFT_ACCOUNTING_DB_USER: accounting_api
       EBAY_SOFT_ACCOUNTING_DB_PASSWORD: ${EBAY_SOFT_ACCOUNTING_DB_PASSWORD:-accounting_api}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
       OTEL_SERVICE_NAME: accounting-api
-      JAVA_TOOL_OPTIONS: "-XX:+UseG1GC -XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError"
+      JAVA_TOOL_OPTIONS: "-XX:+UseG1GC -XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError -Xss512k"
     expose:
       - "8084"
     depends_on:

@@ -75,17 +75,10 @@ services:
       # Files live at /etc/ebay-soft/certs/ on the host, never in this repo.
       - /etc/ebay-soft/certs:/etc/traefik/certs:ro
 
-  # Observability — see infra/observability/* for configs
-  tempo:
-    image: grafana/tempo:2.6.1
-    command: ["-config.file=/etc/tempo.yml"]
-    volumes:
-      - ./infra/observability/tempo.yml:/etc/tempo.yml:ro
-      - tempo_data:/var/tempo
-    ports:
-      - "3200:3200"
-      - "4317:4317"   # OTLP gRPC
-
+  # Observability — see infra/observability/* for configs. Tempo (distributed
+  # traces) is omitted on the small box to save ~400 MB; bring it back once we
+  # move to the AX102 or migrate observability to a managed tier. Services keep
+  # emitting OTLP traces — they're just not collected here.
   loki:
     image: grafana/loki:3.3.0
     command: ["-config.file=/etc/loki/local-config.yaml"]
@@ -116,7 +109,6 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  tempo_data:
   loki_data:
   prometheus_data:
   grafana_data:

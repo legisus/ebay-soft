@@ -1,9 +1,16 @@
 services:
   auth-api:
+    # In CI/prod the image comes from GHCR (built by .github/workflows/deploy.yml).
+    # `build:` is kept so `docker compose build` still works for local dev.
+    image: ghcr.io/legisus/ebay-soft-auth-api:latest
     build:
       context: ../..
       dockerfile: services/auth-api/Dockerfile
     restart: unless-stopped
+    # Cap each JVM at 700 MB. With MaxRAMPercentage=70 the heap caps at ~490 MB,
+    # leaving ~200 MB for non-heap (metaspace, codecache, threads). Without this
+    # limit each container sees the host's full 8 GB and 5 JVMs OOM-kill each other.
+    mem_limit: 700m
     environment:
       EBAY_SOFT_AUTH_DB_URL: jdbc:postgresql://postgres:5432/ebay_soft?currentSchema=auth
       EBAY_SOFT_AUTH_DB_USER: auth_api
@@ -11,7 +18,9 @@ services:
       EBAY_SOFT_INTERNAL_JWT_SECRET: ${EBAY_SOFT_INTERNAL_JWT_SECRET}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
       OTEL_SERVICE_NAME: auth-api
-      JAVA_TOOL_OPTIONS: "-XX:+UseG1GC -XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError"
+      # -Xss512k halves the per-thread stack from the 1 MB default — Spring Boot keeps ~30 threads
+      # at idle, so this trims ~15 MB per JVM. Adds up to ~75 MB across 5 services on the small box.
+      JAVA_TOOL_OPTIONS: "-XX:+UseG1GC -XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError -Xss512k"
     expose:
       - "8081"
     depends_on:

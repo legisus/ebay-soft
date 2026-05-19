@@ -1,9 +1,11 @@
 services:
   ebay-conn-api:
+    image: ghcr.io/legisus/ebay-soft-ebay-conn-api:latest
     build:
       context: ../..
       dockerfile: services/ebay-conn-api/Dockerfile
     restart: unless-stopped
+    mem_limit: 700m
     environment:
       POSTGRES_HOST: postgres
       EBAY_SOFT_EBAY_CONN_DB_USER: ebay_conn_api
@@ -18,7 +20,7 @@ services:
       EBAY_MARKETPLACE_DELETION_URL: ${EBAY_MARKETPLACE_DELETION_URL:-https://ebay-soft.com/v1/ebay/marketplace-deletion}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
       OTEL_SERVICE_NAME: ebay-conn-api
-      JAVA_TOOL_OPTIONS: "-XX:+UseG1GC -XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError"
+      JAVA_TOOL_OPTIONS: "-XX:+UseG1GC -XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError -Xss512k"
     expose:
       - "8082"
     depends_on:

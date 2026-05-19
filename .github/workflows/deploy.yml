@@ -1,109 +1,186 @@
 name: Deploy
 
+# Build images on GitHub-hosted runners (4c+), push to GHCR, then pull on the
+# Hetzner box. The box never runs gradle/javac anymore — eliminates the
+# load-spike-to-130 incidents from the build-on-box era. See README → Deploy.
+
 on:
   push:
     branches: [main]
-  workflow_dispatch:                # manual re-deploy from the Actions tab
+  workflow_dispatch:
     inputs:
       services:
-        description: 'Comma-separated services to rebuild (blank = changed only)'
+        description: 'Comma-separated services to force-build (blank = changed only)'
         required: false
         default: ''
 
-# Never run two deploys in parallel against the same box.
 concurrency:
   group: deploy-main
   cancel-in-progress: false
 
+env:
+  IMAGE_PREFIX: ghcr.io/legisus/ebay-soft
+
 jobs:
-  deploy:
-    name: Pull + build + recreate on Hetzner
+  resolve:
+    name: Resolve services to build
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    if: github.repository == 'legisus/ebay-soft'
-    environment:
-      name: production
-      url: https://ebay-soft.com/v1/health
-    env:
-      # Build one service at a time — the box is 2 vCPU / 8 GB; parallel builds
-      # swap-thrash and time out the SSH session.
-      COMPOSE_PARALLEL_LIMIT: '1'
+    outputs:
+      services: ${{ steps.list.outputs.services }}
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
-      - name: Authorize SSH agent with deploy key
-        uses: webfactory/ssh-agent@v0.9.0
+      - uses: actions/checkout@v4
         with:
-          ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
+          fetch-depth: 0
 
-      - name: Pin host key (prevent MITM on first connection)
-        run: |
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          # Captured 2026-05-18 — rotate if Hetzner reinstalls the box.
-          echo "${{ secrets.HETZNER_SSH_HOST }} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIpMx7Z3Sg/mLxT2YBhbyiateIsqpgL5yz0hLIlHzCmT" >> ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
+      - id: tag
+        run: echo "tag=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: Compute services to rebuild
-        id: services
+      - id: list
         env:
           BEFORE: ${{ github.event.before }}
-          AFTER:  ${{ github.event.after }}
+          AFTER: ${{ github.event.after }}
           MANUAL: ${{ github.event.inputs.services }}
         run: |
           set -e
+          ALL='["auth-api","ebay-conn-api","sync-api","accounting-api","api-gateway"]'
+
           if [ -n "$MANUAL" ]; then
-            echo "list=$MANUAL" >> "$GITHUB_OUTPUT"
-            echo "  manual override: $MANUAL"
-            exit 0
-          fi
-          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
-            # New branch / first push — rebuild everything.
-            echo "list=" >> "$GITHUB_OUTPUT"
-            echo "  full rebuild (no BEFORE sha)"
+            list=$(echo "$MANUAL" | tr ',' '\n' | sed '/^$/d' | jq -R . | jq -sc .)
+            echo "services=$list" >> "$GITHUB_OUTPUT"
+            echo "  manual override: $list"
             exit 0
           fi
 
-          # Anything under buildSrc/, libs/, gradle/, settings.gradle.kts → rebuild every service.
-          shared=$(git diff --name-only "$BEFORE..$AFTER" 2>/dev/null | grep -E '^(buildSrc/|libs/|gradle/|settings\.gradle\.kts|build\.gradle\.kts|gradle\.properties)' || true)
+          # New branch / first push → rebuild everything.
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "services=$ALL" >> "$GITHUB_OUTPUT"
+            echo "  full build (no BEFORE sha)"
+            exit 0
+          fi
+
+          # Shared file (libs, gradle, root build files) → rebuild every service.
+          shared=$(git diff --name-only "$BEFORE..$AFTER" 2>/dev/null \
+            | grep -E '^(buildSrc/|libs/|gradle/|settings\.gradle\.kts|build\.gradle\.kts|gradle\.properties)' || true)
           if [ -n "$shared" ]; then
-            echo "list=" >> "$GITHUB_OUTPUT"
-            echo "  shared file touched — full rebuild"
+            echo "services=$ALL" >> "$GITHUB_OUTPUT"
+            echo "  shared file touched — full build:"
             echo "$shared" | head -5
             exit 0
           fi
 
           # Otherwise: only services whose own dir changed.
-          changed=$(git diff --name-only "$BEFORE..$AFTER" 2>/dev/null | awk -F/ '/^services\// {print $2}' | sort -u | tr '\n' ' ')
-          echo "list=$changed" >> "$GITHUB_OUTPUT"
-          echo "  changed services: ${changed:-<none>}"
+          changed=$(git diff --name-only "$BEFORE..$AFTER" 2>/dev/null \
+            | awk -F/ '/^services\// {print $2}' | sort -u)
+          if [ -z "$changed" ]; then
+            echo "services=[]" >> "$GITHUB_OUTPUT"
+            echo "  no service changes — deploy step will just compose pull+up (e.g. infra-only changes)"
+            exit 0
+          fi
+          list=$(echo "$changed" | jq -R . | jq -sc .)
+          echo "services=$list" >> "$GITHUB_OUTPUT"
+          echo "  changed services: $list"
 
-      - name: Deploy
+  build:
+    name: Build ${{ matrix.service }}
+    needs: resolve
+    if: needs.resolve.outputs.services != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.resolve.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ needs.resolve.outputs.tag }}
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:latest
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,scope=${{ matrix.service }},mode=max
+
+  deploy:
+    name: Pull + recreate on Hetzner
+    needs: [resolve, build]
+    # Run even if `build` was skipped (services=[]) — infra-only changes still
+    # need git pull + compose up to take effect. Don't run if build failed.
+    if: always() && needs.resolve.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      # Forwarded to the box for `docker login ghcr.io` — read-only on packages.
+      contents: read
+      packages: read
+    environment:
+      name: production
+      url: https://ebay-soft.com/v1/health
+    steps:
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
+
+      - name: Pin host key
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "${{ secrets.HETZNER_SSH_HOST }} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIpMx7Z3Sg/mLxT2YBhbyiateIsqpgL5yz0hLIlHzCmT" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Pull images + recreate containers
         env:
           HOST: ${{ secrets.HETZNER_SSH_HOST }}
           USER: ${{ secrets.HETZNER_SSH_USER }}
-          SERVICES: ${{ steps.services.outputs.list }}
+          # Forward the workflow's short-lived GITHUB_TOKEN so the box can pull
+          # from GHCR without a long-lived PAT.
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # SSH keepalive: send a no-op every 30s, allow up to 30min idle before giving up.
-          # Without this the connection times out during long compose builds on the small box.
-          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=60 -o BatchMode=yes \
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o BatchMode=yes \
               "$USER@$HOST" \
-              "SERVICES='$SERVICES' bash -eux" <<'SCRIPT'
+              "GHCR_USER='$GHCR_USER' GHCR_TOKEN='$GHCR_TOKEN' bash -eux" <<'SCRIPT'
             cd /opt/ebay-soft
             git fetch origin --prune
             git checkout main
             git pull --ff-only origin main
 
-            export COMPOSE_PARALLEL_LIMIT=1
+            # Authenticate to GHCR with the workflow's GITHUB_TOKEN. Token is
+            # valid only for the duration of this workflow run — we refresh on
+            # every deploy, so no long-lived secret lives on the box.
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
-            if [ -z "$SERVICES" ]; then
-              echo "→ rebuilding all services (shared changes or first deploy)"
-              docker compose -f compose.prod.yml --env-file /etc/ebay-soft/env build
-              docker compose -f compose.prod.yml --env-file /etc/ebay-soft/env up -d --remove-orphans
-            else
-              echo "→ rebuilding only: $SERVICES"
-              docker compose -f compose.prod.yml --env-file /etc/ebay-soft/env build $SERVICES
-              docker compose -f compose.prod.yml --env-file /etc/ebay-soft/env up -d $SERVICES
-            fi
+            # Pull the :latest tag (compose partials reference it). Image SHA tags
+            # exist in GHCR for rollback; we don't pin them in compose to keep the
+            # deploy step a simple "pull current latest".
+            docker compose -f compose.prod.yml --env-file /etc/ebay-soft/env pull
 
-            docker image prune --filter "until=24h" -f >/dev/null
+            # Recreate any container whose image hash moved. --remove-orphans cleans up
+            # services that were dropped from the include list.
+            docker compose -f compose.prod.yml --env-file /etc/ebay-soft/env up -d --remove-orphans
+
+            # Prune dangling images older than 72h. Keeps disk usage bounded while
+            # leaving recent rollback targets in the local cache.
+            docker image prune --filter "until=72h" -f >/dev/null
+
+            # Wipe the credential — we don't keep tokens at rest on the box.
+            docker logout ghcr.io >/dev/null
           SCRIPT
 
       - name: Wait for health
@@ -128,6 +205,7 @@ jobs:
             echo "## Deploy result"
             echo "- ref: \`${GITHUB_REF}\`"
             echo "- sha: \`${GITHUB_SHA}\`"
-            echo "- services rebuilt: \`${{ steps.services.outputs.list || '(all)' }}\`"
+            echo "- tag: \`${{ needs.resolve.outputs.tag }}\`"
+            echo "- services built: \`${{ needs.resolve.outputs.services }}\`"
             echo "- live: https://ebay-soft.com/v1/health"
           } >> "$GITHUB_STEP_SUMMARY"

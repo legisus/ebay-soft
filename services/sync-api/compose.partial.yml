@@ -1,9 +1,11 @@
 services:
   sync-api:
+    image: ghcr.io/legisus/ebay-soft-sync-api:latest
     build:
       context: ../..
       dockerfile: services/sync-api/Dockerfile
     restart: unless-stopped
+    mem_limit: 700m
     environment:
       POSTGRES_HOST: postgres
       EBAY_SOFT_SYNC_DB_USER: sync_api
@@ -11,7 +13,7 @@ services:
       EBAY_API_BASE_URL: ${EBAY_API_BASE_URL:-https://api.sandbox.ebay.com}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
       OTEL_SERVICE_NAME: sync-api
-      JAVA_TOOL_OPTIONS: "-XX:+UseG1GC -XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError"
+      JAVA_TOOL_OPTIONS: "-XX:+UseG1GC -XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError -Xss512k"
     expose:
       - "8083"
     depends_on:
