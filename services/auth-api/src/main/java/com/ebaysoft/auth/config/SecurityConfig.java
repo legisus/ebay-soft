@@ -7,9 +7,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * Bootstrap security config. The full sign-up/login/JWT issuance flow lands when issue #26's
- * production endpoints are implemented; for now the auth-api only exposes {@code /v1/health} and
- * the Actuator endpoints, both unauthenticated for Phase 0 smoke tests.
+ * Stateless security for the Internal Demo milestone (#162). /signup, /login and /refresh are
+ * public; /me does its own bearer-token check inside the controller (since per-service JWT
+ * validation at api-gateway is a follow-up — see #162 acceptance criteria).
  */
 @Configuration
 public class SecurityConfig {

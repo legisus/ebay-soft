@@ -20,5 +20,14 @@ dependencies {
     implementation("org.flywaydb:flyway-core:11.3.0")
     implementation("org.flywaydb:flyway-database-postgresql:11.3.0")
     runtimeOnly("org.postgresql:postgresql:42.7.4")
+
+    // Argon2id password hashing — Spring Security ships the encoder API, BouncyCastle
+    // provides the actual Argon2 implementation it delegates to.
+    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
+
+    // Nimbus JOSE+JWT comes transitively via :libs:common-security but the explicit
+    // pin keeps version-management deterministic for issued tokens.
+    implementation("com.nimbusds:nimbus-jose-jwt:9.41.2")
+
     testImplementation(project(":libs:common-test"))
 }
