@@ -1,20 +1,234 @@
+/* All @import statements must precede @theme / @layer / regular rules
+   per the CSS spec — including Tailwind 4's own @import below. */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,200..900,0..100,0..1;1,9..144,200..900,0..100,0..1&family=Geist:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap");
 @import "tailwindcss";
 
-/* Form rows + form-control look — kept minimal so we can iterate per page. */
-.field {
-  @apply mt-3 block w-full rounded-md border border-slate-300 bg-white px-3 py-2
-         text-sm shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1
-         focus:ring-slate-500;
+@theme {
+  --color-newsprint: #FAF7F0;
+  --color-newsprint-dim: #F1ECDF;
+  --color-ink: #1A1814;
+  --color-ink-soft: #3B3530;
+  --color-ink-faded: #6B635A;
+  --color-rule: #D9D2C5;
+  --color-rule-soft: #E8E1D2;
+  --color-oxblood: #7A2828;
+  --color-oxblood-deep: #5B1818;
+  --color-forest: #2D5F4B;
+
+  --font-display: "Fraunces", "Times New Roman", serif;
+  --font-body: "Geist", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
+
+html {
+  font-family: var(--font-body);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 50% -10%, color-mix(in oklab, var(--color-oxblood) 4%, transparent), transparent),
+    var(--color-newsprint);
+  color: var(--color-ink);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Editorial primitives — used across landing + app shell.
+   ───────────────────────────────────────────────────────────────── */
+
+.font-display { font-family: var(--font-display); }
+.font-mono    { font-family: var(--font-mono); }
+
+.rule-h {
+  border-bottom: 1px solid var(--color-rule);
+}
+.rule-h-double {
+  border-top: 1px solid var(--color-rule);
+  border-bottom: 3px double var(--color-rule);
+}
+.rule-v {
+  border-left: 1px solid var(--color-rule);
+}
+
+.dropcap::first-letter {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 4.5em;
+  line-height: 0.82;
+  float: left;
+  padding: 0.05em 0.12em 0 0;
+  color: var(--color-oxblood);
+}
+
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-ink-faded);
+}
+
+.headline-xl {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 144, "SOFT" 0, "WONK" 0;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 0.92;
+}
+
+.numerals {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum", "zero";
+}
+
+/* Buttons + links in the editorial vocabulary */
+.btn-ink {
+  @apply inline-flex items-center justify-center px-6 py-3 font-medium text-[15px]
+         transition-all duration-200;
+  background: var(--color-ink);
+  color: var(--color-newsprint);
+  border: 1px solid var(--color-ink);
+}
+.btn-ink:hover {
+  background: var(--color-oxblood);
+  border-color: var(--color-oxblood);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  @apply inline-flex items-center justify-center px-6 py-3 font-medium text-[15px]
+         transition-all duration-200;
+  background: transparent;
+  color: var(--color-ink);
+  border: 1px solid var(--color-ink);
+}
+.btn-ghost:hover {
+  background: var(--color-ink);
+  color: var(--color-newsprint);
+}
+
+.link-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 100% 1px;
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  transition: background-size 200ms ease;
+}
+.link-underline:hover {
+  background-size: 0% 1px;
+  background-position: 100% 100%;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Form primitives — used by /signup and /login. Editorial styling
+   so the existing pages don't clash with the new aesthetic.
+   ───────────────────────────────────────────────────────────────── */
+
 .label {
-  @apply block text-sm font-medium text-slate-700;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
 }
+.field {
+  margin-top: 0.5rem;
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-rule);
+  padding: 0.6rem 0.1rem;
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--color-ink);
+  transition: border-color 200ms ease;
+}
+.field:focus {
+  outline: none;
+  border-bottom-color: var(--color-oxblood);
+}
+
 .btn-primary {
-  @apply inline-flex w-full justify-center rounded-md bg-slate-900 px-3 py-2
-         text-sm font-semibold text-white shadow-sm hover:bg-slate-800
-         focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
-         focus-visible:outline-slate-900 disabled:cursor-not-allowed disabled:opacity-60;
+  @apply w-full;
+  /* Reuses the ink button look in form contexts. */
+  background: var(--color-ink);
+  color: var(--color-newsprint);
+  border: 1px solid var(--color-ink);
+  padding: 0.9rem 1rem;
+  font-weight: 500;
+  font-size: 15px;
+  transition: all 200ms ease;
+}
+.btn-primary:hover {
+  background: var(--color-oxblood);
+  border-color: var(--color-oxblood);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--color-ink-faded);
+  border-color: var(--color-ink-faded);
 }
 .btn-link {
-  @apply text-sm font-medium text-slate-700 hover:underline;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-rule);
+  transition: text-decoration-color 200ms ease;
+}
+.btn-link:hover {
+  text-decoration-color: var(--color-oxblood);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Landing-page-specific animations + the marquee ticker.
+   ───────────────────────────────────────────────────────────────── */
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.reveal {
+  opacity: 0;
+  animation: reveal-up 700ms cubic-bezier(.2, .65, .3, 1) forwards;
+}
+.reveal-1 { animation-delay: 0ms; }
+.reveal-2 { animation-delay: 110ms; }
+.reveal-3 { animation-delay: 220ms; }
+.reveal-4 { animation-delay: 340ms; }
+.reveal-5 { animation-delay: 480ms; }
+
+@keyframes rule-draw {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.rule-draw {
+  transform-origin: left;
+  animation: rule-draw 900ms cubic-bezier(.6, .04, .14, 1) 200ms forwards;
+}
+
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.ticker {
+  animation: ticker-scroll 50s linear infinite;
+}
+.ticker:hover { animation-play-state: paused; }
+
+/* Paper grain — extremely subtle. Adds warmth without screaming. */
+.grain::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.10 0 0 0 0 0.09 0 0 0 0 0.08 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
 }

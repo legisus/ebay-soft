@@ -20,9 +20,9 @@ export default function Signup() {
       navigate("/dashboard");
     } catch (e) {
       if (e instanceof ApiError && e.status === 400) {
-        setError("Email already in use or password too short (min 12 chars).");
+        setError("Email already in use, or password too short (minimum 12 characters).");
       } else {
-        setError("Could not sign up — try again.");
+        setError("Could not open the account. Try again in a moment.");
       }
     } finally {
       setBusy(false);
@@ -30,48 +30,81 @@ export default function Signup() {
   }
 
   return (
-    <div className="mx-auto mt-16 max-w-md px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Create your eBay Soft account</h1>
-      <p className="mt-2 text-sm text-slate-600">
-        Free during the demo. No email verification yet — you'll get a real verification flow once
-        the launch ships.
-      </p>
-      <form className="mt-8 space-y-4" onSubmit={onSubmit}>
-        <div>
-          <label className="label" htmlFor="email">Email</label>
-          <input
-            id="email"
-            className="field"
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+    <div className="grain min-h-screen">
+      <header className="rule-h-double">
+        <div className="mx-auto flex max-w-7xl items-baseline justify-between px-6 py-4 md:px-10">
+          <Link to="/" className="font-display text-xl font-medium tracking-tight">
+            The eBay-Soft Ledger
+          </Link>
+          <Link to="/login" className="text-sm link-underline text-[var(--color-ink-soft)]">
+            Already a subscriber? Sign in
+          </Link>
         </div>
-        <div>
-          <label className="label" htmlFor="password">Password</label>
-          <input
-            id="password"
-            className="field"
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={12}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <p className="mt-1 text-xs text-slate-500">At least 12 characters.</p>
+      </header>
+
+      <main className="mx-auto grid max-w-7xl gap-12 px-6 py-16 md:grid-cols-12 md:px-10 md:py-24">
+        <div className="md:col-span-7">
+          <p className="kicker">Subscriber registration</p>
+          <h1 className="headline-xl mt-4 text-[clamp(2.5rem,6vw,4.5rem)]">
+            Open your{" "}
+            <em className="not-italic italic" style={{ color: "var(--color-oxblood)" }}>
+              account.
+            </em>
+          </h1>
+          <p className="dropcap mt-8 font-display text-[1.1rem] leading-[1.55] text-[var(--color-ink-soft)] md:text-[1.2rem] md:max-w-[55ch]">
+            Fourteen days, no card on file, no analytics pixel. We don't ask for anything we
+            don't need to give you a real number on your dashboard within minutes of connecting
+            your eBay account.
+          </p>
         </div>
-        {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
-        <button className="btn-primary" type="submit" disabled={busy}>
-          {busy ? "Creating…" : "Create account"}
-        </button>
-      </form>
-      <p className="mt-6 text-center text-sm text-slate-600">
-        Already have one?{" "}
-        <Link className="btn-link" to="/login">Sign in</Link>
-      </p>
+
+        <form
+          onSubmit={onSubmit}
+          className="rule-h-double bg-[var(--color-newsprint-dim)]/40 p-8 md:col-span-5 md:p-10"
+          style={{ borderTop: "3px double var(--color-rule)", borderBottom: "3px double var(--color-rule)" }}
+        >
+          <div>
+            <label className="label" htmlFor="email">Email</label>
+            <input
+              id="email"
+              className="field"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div className="mt-6">
+            <label className="label" htmlFor="password">Password</label>
+            <input
+              id="password"
+              className="field"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={12}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--color-ink-faded)]">
+              Minimum 12 characters
+            </p>
+          </div>
+          {error && (
+            <p className="mt-5 font-mono text-[12px] uppercase tracking-[0.12em]" role="alert"
+               style={{ color: "var(--color-oxblood)" }}>
+              {error}
+            </p>
+          )}
+          <button className="btn-primary mt-8" type="submit" disabled={busy}>
+            {busy ? "Opening account…" : "Open account →"}
+          </button>
+          <p className="mt-6 text-center font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--color-ink-faded)]">
+            14-day trial · no card · cancel anytime
+          </p>
+        </form>
+      </main>
     </div>
   );
 }

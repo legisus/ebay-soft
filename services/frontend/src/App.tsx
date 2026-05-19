@@ -1,8 +1,19 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./lib/auth";
+import Landing from "./pages/Landing";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+
+/**
+ * Authenticated users skip the landing page and go straight to /dashboard;
+ * everyone else sees the marketing page at /.
+ */
+function RootRoute() {
+  const { me, loading } = useAuth();
+  if (loading) return <FullPageHint label="Loading…" />;
+  return me ? <Navigate to="/dashboard" replace /> : <Landing />;
+}
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const { me, loading } = useAuth();
@@ -13,7 +24,7 @@ function RequireAuth({ children }: { children: React.ReactElement }) {
 
 function FullPageHint({ label }: { label: string }) {
   return (
-    <div className="flex min-h-screen items-center justify-center text-sm text-slate-600">
+    <div className="flex min-h-screen items-center justify-center font-mono text-xs uppercase tracking-[0.16em] text-[var(--color-ink-faded)]">
       {label}
     </div>
   );
@@ -22,7 +33,7 @@ function FullPageHint({ label }: { label: string }) {
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<RootRoute />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/login" element={<Login />} />
       <Route
