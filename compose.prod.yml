@@ -33,7 +33,10 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
     ports:
-      - "5432:5432"
+      # Bound to localhost only. Inter-container traffic goes via docker DNS
+      # (postgres:5432). The host-side publish is just for SSH-tunnelled
+      # admin access (pgcli over `ssh -L 5432:localhost:5432`).
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -46,7 +49,8 @@ services:
     volumes:
       - redis_data:/data
     ports:
-      - "6379:6379"
+      # localhost-only; services reach redis via docker DNS (redis:6379).
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -69,7 +73,10 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8090:8080"           # dashboard; blocked externally by DOCKER-USER iptables
+      # Dashboard exposed on localhost only — earlier audit showed 8090 was
+      # actually reachable from the internet (the DOCKER-USER iptables rule
+      # didn't cover it). Tunnel via `ssh -L 8090:localhost:8090` to use it.
+      - "127.0.0.1:8090:8080"
     volumes:
       - ./infra/traefik:/etc/traefik/dynamic:ro
       # Cloudflare Origin Cert + key — bind-mounted read-only from host.
@@ -135,13 +142,17 @@ services:
   grafana:
     image: grafana/grafana:11.4.0
     environment:
+      # Anonymous Viewer is fine while the port is localhost-only (the SSH tunnel
+      # is the auth gate). If we expose Grafana via Traefik later, this comes off
+      # and admin/admin sets a real password on first login.
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
     volumes:
       - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana
     ports:
-      - "3000:3000"
+      # localhost-only; tunnel via `ssh -L 3000:localhost:3000` to reach the UI.
+      - "127.0.0.1:3000:3000"
     depends_on:
       - prometheus
       - loki
