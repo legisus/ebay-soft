@@ -18,7 +18,7 @@ r2dbcPostgres         = "1.0.7.RELEASE"
 
 # Observability
 micrometer            = "1.14.0"
-otel                  = "1.43.0"
+otel                  = "1.62.0"
 logstashLogback       = "8.0"
 
 # Code generation / mapping
