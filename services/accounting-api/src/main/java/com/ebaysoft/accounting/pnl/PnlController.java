@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Public P&L surface. Sellers' dashboards consume this — every Money field crosses the wire as
+ * Public P&amp;L surface. Sellers' dashboards consume this — every Money field crosses the wire as
  * {@code {"amount":"123.45","currency":"USD"}} via {@code common-web}'s Jackson module.
  */
 @RestController

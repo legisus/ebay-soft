@@ -5,7 +5,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Parameters for a P&L query. Validates the {@code groupBy} value up front so the SQL builder
+ * Parameters for a P&amp;L query. Validates the {@code groupBy} value up front so the SQL builder
  * can't be tricked into emitting an unexpected column reference.
  */
 public record PnlQuery(UUID tenantId, LocalDate from, LocalDate to, String groupBy) {

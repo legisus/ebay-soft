@@ -3,7 +3,7 @@ package com.ebaysoft.accounting.pnl;
 import com.ebaysoft.domain.money.Money;
 
 /**
- * Pure-function P&L math. Lives outside any DB / Spring code so it's trivially testable.
+ * Pure-function P&amp;L math. Lives outside any DB / Spring code so it's trivially testable.
  *
  * <p>{@code net = revenue − fees − refunds − cogs − shipping − ads}. All operands MUST share the
  * same currency — {@link Money} enforces that.

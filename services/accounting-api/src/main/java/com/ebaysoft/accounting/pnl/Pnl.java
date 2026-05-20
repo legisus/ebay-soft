@@ -6,7 +6,7 @@ import java.util.UUID;
 
 /**
  * One row of a profit-and-loss aggregation. The fundamental shape used everywhere {@code
- * accounting-api} exposes P&L: a date (or aggregation key surrogate), a grouping label, and the
+ * accounting-api} exposes P&amp;L: a date (or aggregation key surrogate), a grouping label, and the
  * five money columns that sum to net.
  *
  * <p>{@code net = revenue − fees − refunds − cogs − shipping − ads}.
