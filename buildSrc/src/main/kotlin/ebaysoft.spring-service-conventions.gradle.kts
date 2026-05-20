@@ -26,6 +26,10 @@ dependencies {
     "implementation"("org.springframework.boot:spring-boot-starter-validation")
     "implementation"("io.micrometer:micrometer-tracing-bridge-otel")
     "implementation"("io.opentelemetry:opentelemetry-exporter-otlp")
+    // Required so /actuator/prometheus is registered — without this the endpoint
+    // returns 404 and Prometheus can't scrape the service. micrometer-tracing is
+    // for spans; the registry is what serves the metrics text format.
+    "implementation"("io.micrometer:micrometer-registry-prometheus")
     "implementation"("net.logstash.logback:logstash-logback-encoder:8.0")
 
     "compileOnly"("org.projectlombok:lombok:$lombokVersion")
