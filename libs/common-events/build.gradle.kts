@@ -11,5 +11,5 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
 
     testImplementation(project(":libs:common-test"))
-    testRuntimeOnly("org.postgresql:postgresql:42.7.4")
+    testRuntimeOnly("org.postgresql:postgresql:42.7.11")
 }
