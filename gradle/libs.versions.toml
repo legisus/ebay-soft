@@ -35,7 +35,7 @@ assertj               = "3.26.3"
 mockito               = "5.14.2"
 testcontainers        = "1.20.4"
 wiremock              = "3.9.2"
-archunit              = "1.3.0"
+archunit              = "1.4.2"
 
 # Build / quality plugins
 springDepMgmt         = "1.1.6"
