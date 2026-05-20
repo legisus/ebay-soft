@@ -13,7 +13,7 @@ springCloudGateway    = "4.2.0"
 
 # Persistence
 flyway                = "11.3.0"
-postgresql            = "42.7.4"
+postgresql            = "42.7.11"
 r2dbcPostgres         = "1.0.7.RELEASE"
 
 # Observability
