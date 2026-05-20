@@ -1,0 +1,5 @@
+# Placeholder so the mount target exists. Dashboards land here as
+# infra/observability/grafana/provisioning/dashboards/<name>.json plus a
+# `providers.yml` describing which folder Grafana should scan. Building the
+# first one interactively in the UI is cheaper than hand-rolling Grafana 11
+# panel JSON — export to JSON when stable.

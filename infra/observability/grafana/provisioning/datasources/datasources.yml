@@ -1,0 +1,23 @@
+# Grafana auto-provisioning — datasources are wired up at boot so anyone
+# opening the dashboard doesn't have to point them at the right URLs.
+# Dashboards stay un-provisioned for now (built interactively in the UI);
+# see infra/observability/grafana/provisioning/dashboards/ when those land.
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      timeInterval: 15s
+      manageAlerts: true   # Grafana surfaces our recording/alerting rules
+
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    jsonData:
+      maxLines: 1000

@@ -1,0 +1,82 @@
+# Alert rules — Prometheus evaluates these every `evaluation_interval`
+# (15s) and shows their firing state in Grafana's Alerting panel.
+# AlertManager notification routing (email/Slack/Telegram) lands when
+# we have customer-facing services in Phase 4. Until then the dashboard
+# is the eyeball — `up{}` failures and HighMemoryUsage will surface there.
+
+groups:
+  - name: host
+    interval: 30s
+    rules:
+      # Soft warning — gives ~10 minutes of headroom before a real crisis.
+      - alert: HostMemoryPressure
+        expr: |
+          (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host mem available below 20% for 5m"
+          description: |
+            Available memory on the Hetzner box has been under 20% for the
+            past 5 minutes. Two previous incidents (2026-05-18) cascaded
+            from this threshold into a full OOM-kill loop. Run
+            `docker stats` and look for the JVM whose RSS is climbing.
+
+      # Hard warning — by the time we see this, swap is engaging.
+      - alert: HostMemoryCritical
+        expr: |
+          (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.10
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Host mem available below 10% for 2m"
+          description: |
+            Imminent OOM risk. If swap is configured the system will start
+            paging now; without swap the OOM-killer will fire shortly.
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Root fs less than 15% free"
+          description: "docker image prune may need attention; check `du -sh /var/lib/docker`."
+
+  - name: containers
+    interval: 30s
+    rules:
+      # OOM event surfaces in cAdvisor's container_oom_events_total counter.
+      - alert: ContainerOOMKilled
+        expr: increase(container_oom_events_total[5m]) > 0
+        for: 0m   # fire immediately on the first observation
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container OOM-killed in the last 5m"
+          description: "name={{ $labels.name }} — check `docker logs` immediately."
+
+      # Repeated restart loop = something more interesting than transient crash.
+      - alert: ContainerRestartLoop
+        expr: rate(container_start_time_seconds[10m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container restarting frequently"
+          description: "name={{ $labels.name }} restarted multiple times in 10m."
+
+  - name: services
+    interval: 30s
+    rules:
+      # Application-level: a service hasn't reported metrics in 1m.
+      - alert: ServiceDown
+        expr: up{job=~"api-gateway|auth-api|ebay-conn-api|sync-api|accounting-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.service }} unreachable from Prometheus"
+          description: "Either the container is down or its /actuator/prometheus endpoint stopped responding."

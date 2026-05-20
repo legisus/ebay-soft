@@ -88,9 +88,49 @@ services:
 
   prometheus:
     image: prom/prometheus:v3.0.1
+    mem_limit: 256m
     volumes:
       - ./infra/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/observability/rules:/etc/prometheus/rules:ro
       - prometheus_data:/prometheus
+
+  # Host metrics exporter — CPU, memory, disk, filesystem, network counters.
+  # Bind-mounts /proc + /sys read-only so it sees the actual host (not the
+  # container's namespace). 9100 is the well-known port.
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    mem_limit: 64m
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/host/root
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro,rslave
+    pid: host
+    restart: unless-stopped
+
+  # Per-container metrics — CPU/mem/IO usage per container + crucially the
+  # container_oom_events_total counter that fires the ContainerOOMKilled alert.
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.2
+    mem_limit: 128m
+    privileged: true
+    command:
+      - --housekeeping_interval=10s
+      - --docker_only=true
+      - --store_container_labels=false
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:11.4.0

@@ -2,7 +2,14 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+# Alert rules are evaluated every `evaluation_interval` and surface in
+# Grafana via the AlertManager-less "rules" panel until we wire up
+# notification routing in Phase 4+.
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
 scrape_configs:
+  # ─── Application services ──────────────────────────────────────────────
   - job_name: api-gateway
     metrics_path: /actuator/prometheus
     static_configs:
@@ -14,3 +21,35 @@ scrape_configs:
     static_configs:
       - targets: ["auth-api:8081"]
         labels: { service: auth-api }
+
+  - job_name: ebay-conn-api
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["ebay-conn-api:8082"]
+        labels: { service: ebay-conn-api }
+
+  - job_name: sync-api
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["sync-api:8083"]
+        labels: { service: sync-api }
+
+  - job_name: accounting-api
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["accounting-api:8084"]
+        labels: { service: accounting-api }
+
+  # ─── Host + container metrics ──────────────────────────────────────────
+  # node-exporter exposes Linux host metrics on the box (CPU, mem, disk, fs).
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels: { service: host }
+
+  # cAdvisor exposes per-container metrics (CPU, mem, IO, OOM events) from
+  # docker's cgroup files. Needed for "which JVM is eating memory" answers.
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["cadvisor:8080"]
+        labels: { service: container }
