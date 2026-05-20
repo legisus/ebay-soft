@@ -5,6 +5,12 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # Without grouping, every action bump (checkout, setup-java, upload-artifact, etc.)
+    # opens its own PR — last week that produced 5 PRs in one Monday morning.
+    # Bundling them keeps the queue manageable.
+    groups:
+      gh-actions:
+        patterns: ["*"]
 
   - package-ecosystem: gradle
     directory: "/"
@@ -26,3 +32,9 @@ updates:
           - "org.testcontainers*"
           - "org.assertj*"
           - "org.wiremock*"
+          - "com.tngtech.archunit*"
+      # Everything else: patch-only updates ship as a single PR. Minor/major bumps
+      # still land individually so they can be reviewed in isolation.
+      misc-patches:
+        patterns: ["*"]
+        update-types: ["patch"]
