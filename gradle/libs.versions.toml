@@ -23,7 +23,7 @@ logstashLogback       = "8.0"
 
 # Code generation / mapping
 mapstruct             = "1.6.3"
-lombok                = "1.18.36"
+lombok                = "1.18.46"
 
 # External SDKs
 stripe                = "28.0.0"
