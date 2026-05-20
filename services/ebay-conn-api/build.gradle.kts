@@ -17,7 +17,7 @@ dependencies {
     implementation("org.flywaydb:flyway-core:11.3.0")
     implementation("org.flywaydb:flyway-database-postgresql:11.3.0")
     runtimeOnly("org.postgresql:r2dbc-postgresql:1.0.7.RELEASE")
-    runtimeOnly("org.postgresql:postgresql:42.7.4")   // Flyway uses JDBC
+    runtimeOnly("org.postgresql:postgresql:42.7.4") // Flyway uses JDBC
 
     implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:2.7.0")
 
