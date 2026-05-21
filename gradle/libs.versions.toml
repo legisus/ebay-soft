@@ -40,7 +40,7 @@ archunit              = "1.4.2"
 # Build / quality plugins
 springDepMgmt         = "1.1.6"
 openapiGenerator      = "7.10.0"
-spotless              = "6.25.0"
+spotless              = "8.5.1"
 errorprone            = "4.1.0"
 ben-manes-versions    = "0.51.0"
 
