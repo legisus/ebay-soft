@@ -6,6 +6,8 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
+import Onboarding from "./pages/Onboarding";
+import Cogs from "./pages/Cogs";
 
 /**
  * Authenticated users skip the landing page and go straight to /dashboard;
@@ -45,6 +47,22 @@ export default function App() {
         element={
           <RequireAuth>
             <Dashboard />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/onboarding"
+        element={
+          <RequireAuth>
+            <Onboarding />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/cogs"
+        element={
+          <RequireAuth>
+            <Cogs />
           </RequireAuth>
         }
       />
