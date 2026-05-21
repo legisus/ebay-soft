@@ -6,10 +6,28 @@ spring:
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
       routes:
+        # Pre-auth endpoints (signup/login/refresh) are rate-limited per source IP
+        # to blunt credential stuffing + spam-signup. Redis-backed token bucket;
+        # see RateLimiterConfig for the key-resolution rule.
+        #   replenishRate=5  → 5 sustained req/s/IP
+        #   burstCapacity=20 → up to 20 in a burst before throttling kicks in
+        - id: auth-api-rate-limited
+          uri: ${EBAY_SOFT_AUTH_API_URL:http://localhost:8081}
+          predicates:
+            - Path=/v1/auth/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
+        # /v1/me + /v1/health are not rate-limited — /me is per-user and already
+        # JWT-gated, /health is exercised by Traefik's healthcheck every 10s.
         - id: auth-api
           uri: ${EBAY_SOFT_AUTH_API_URL:http://localhost:8081}
           predicates:
-            - Path=/v1/auth/**,/v1/me,/v1/health
+            - Path=/v1/me,/v1/health
         - id: ebay-conn-api
           uri: ${EBAY_SOFT_EBAY_CONN_API_URL:http://ebay-conn-api:8082}
           predicates:
