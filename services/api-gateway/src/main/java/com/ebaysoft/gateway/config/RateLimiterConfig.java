@@ -23,19 +23,31 @@ public class RateLimiterConfig {
   @Bean
   public KeyResolver ipKeyResolver() {
     return exchange -> {
-      String forwarded = exchange.getRequest().getHeaders().getFirst("X-Forwarded-For");
-      String clientIp;
-      if (forwarded != null && !forwarded.isBlank()) {
-        // X-Forwarded-For is a comma-separated chain: client, proxy1, proxy2.
-        // We want the original client, which is the first entry.
-        clientIp = forwarded.split(",", 2)[0].trim();
-      } else {
-        clientIp =
-            Optional.ofNullable(exchange.getRequest().getRemoteAddress())
-                .map(addr -> addr.getAddress().getHostAddress())
-                .orElse("anonymous");
-      }
+      var headers = exchange.getRequest().getHeaders();
+      // Header priority — most trustworthy first:
+      //   1. CF-Connecting-IP — Cloudflare's authoritative client IP. Always
+      //      present when traffic comes through our CF zone, and Cloudflare
+      //      strips spoofed copies from outside.
+      //   2. True-Client-IP    — Cloudflare Enterprise + some other CDNs.
+      //   3. X-Forwarded-For   — public chain, first entry is the original
+      //      client per spec. Used only when CF headers are absent.
+      //   4. socket remote      — local dev / direct hits.
+      String clientIp =
+          firstNonBlank(headers.getFirst("CF-Connecting-IP"))
+              .or(() -> firstNonBlank(headers.getFirst("True-Client-IP")))
+              .or(() ->
+                  firstNonBlank(headers.getFirst("X-Forwarded-For"))
+                      .map(h -> h.split(",", 2)[0].trim()))
+              .orElseGet(
+                  () ->
+                      Optional.ofNullable(exchange.getRequest().getRemoteAddress())
+                          .map(addr -> addr.getAddress().getHostAddress())
+                          .orElse("anonymous"));
       return Mono.just(clientIp);
     };
+  }
+
+  private static Optional<String> firstNonBlank(String value) {
+    return value == null || value.isBlank() ? Optional.empty() : Optional.of(value.trim());
   }
 }
