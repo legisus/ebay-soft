@@ -227,8 +227,8 @@ export default function Landing() {
             <span>Published in Frankfurt &amp; the cloud</span>
           </div>
           <div className="flex gap-6 font-mono uppercase tracking-[0.16em]">
-            <a href="#" className="link-underline">Privacy</a>
-            <a href="#" className="link-underline">Terms</a>
+            <Link to="/privacy" className="link-underline">Privacy</Link>
+            <Link to="/terms" className="link-underline">Terms</Link>
             <a href="https://github.com/legisus/ebay-soft" className="link-underline">Source</a>
           </div>
         </div>
