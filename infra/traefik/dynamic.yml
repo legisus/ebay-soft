@@ -13,7 +13,11 @@ http:
       priority: 1
 
     api-gateway:
-      rule: "PathPrefix(`/v1`) || PathPrefix(`/actuator`)"
+      # Public surface = our v1 API only. Actuator endpoints live on api-gateway's
+      # internal management port (9080) and are not routed publicly; before this
+      # change Traefik forwarded /actuator/* and /actuator/prometheus leaked 26 KB
+      # of internal metrics to the world.
+      rule: "PathPrefix(`/v1`)"
       entryPoints: ["websecure"]
       service: api-gateway
       tls: {}

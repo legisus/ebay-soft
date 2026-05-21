@@ -30,7 +30,14 @@ spring:
 server:
   port: ${EBAY_SOFT_GATEWAY_PORT:8080}
 
+# Actuator binds to a separate management port so /actuator/prometheus isn't
+# served by the public 8080 listener. With this, Traefik → 8080 only forwards
+# Spring Cloud Gateway's own routes (/v1/*), and Prometheus scrapes the box-
+# internal port 9080. See infra/observability/prometheus.yml for the scrape
+# target update.
 management:
+  server:
+    port: ${EBAY_SOFT_GATEWAY_MGMT_PORT:9080}
   endpoints:
     web:
       exposure:

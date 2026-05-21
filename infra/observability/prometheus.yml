@@ -13,7 +13,9 @@ scrape_configs:
   - job_name: api-gateway
     metrics_path: /actuator/prometheus
     static_configs:
-      - targets: ["api-gateway:8080"]
+      # Management port (9080) — actuator was moved off the public 8080
+      # listener so /actuator/prometheus stops leaking through Traefik.
+      - targets: ["api-gateway:9080"]
         labels: { service: api-gateway }
 
   - job_name: auth-api
