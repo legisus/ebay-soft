@@ -1,5 +1,6 @@
 package com.ebaysoft.auth.web;
 
+import com.ebaysoft.auth.password.PasswordPepper;
 import com.ebaysoft.auth.tenant.Tenants;
 import com.ebaysoft.auth.token.AuthTokens;
 import com.ebaysoft.auth.token.RefreshTokens;
@@ -25,6 +26,7 @@ public class AuthService {
   private final Users users;
   private final RefreshTokens refreshTokens;
   private final AuthTokens authTokens;
+  private final PasswordPepper pepper;
   private final Argon2PasswordEncoder encoder = Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8();
 
   /** Atomic: create tenant + first user + first refresh token in one transaction. */
@@ -32,11 +34,17 @@ public class AuthService {
   public TokenBundle signup(String email, String rawPassword) {
     String tenantName = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
     UUID tenantId = tenants.create(tenantName);
-    UUID userId = users.create(tenantId, email, encoder.encode(rawPassword));
+    int version = pepper.currentVersion();
+    String hash = encoder.encode(pepper.apply(rawPassword, version));
+    UUID userId = users.create(tenantId, email, hash, version);
     return issueTokens(userId, tenantId, email);
   }
 
-  /** Validate password and issue a fresh pair on success. Empty Optional means auth failed. */
+  /**
+   * Validate password and issue a fresh pair on success. Reads the user's stored {@code
+   * pepper_version} and applies the matching HMAC pepper before Argon2 verification — so rows
+   * created under any past pepper version still authenticate.
+   */
   @Transactional
   public Optional<TokenBundle> login(String email, String rawPassword) {
     Optional<User> maybe = users.findByEmail(email);
@@ -44,7 +52,8 @@ public class AuthService {
       return Optional.empty();
     }
     User u = maybe.get();
-    if (u.passwordHash() == null || !encoder.matches(rawPassword, u.passwordHash())) {
+    if (u.passwordHash() == null
+        || !encoder.matches(pepper.apply(rawPassword, u.pepperVersion()), u.passwordHash())) {
       return Optional.empty();
     }
     users.touchLastLogin(u.id());

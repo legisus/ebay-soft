@@ -34,3 +34,7 @@ ebay-soft:
   auth:
     jwt-issuer: ebay-soft
     service-account-secret: ${EBAY_SOFT_INTERNAL_JWT_SECRET:dev-only-secret-not-for-production-use-at-least-256-bits}
+    # 32+ bytes of random data, base64-encoded. Pre-Argon2 HMAC pepper — see PasswordPepper.
+    # Prod sets via /etc/ebay-soft/env; the dev default is a fixed string so signup works locally
+    # but is clearly marked unsafe for any real deploy.
+    password-pepper-v1: ${EBAY_SOFT_PASSWORD_PEPPER_V1:ZGV2LW9ubHktcGVwcGVyLXYxLW5vdC1mb3ItcHJvZHVjdGlvbi0zMmJ5dGVz}

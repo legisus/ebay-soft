@@ -16,6 +16,11 @@ services:
       EBAY_SOFT_AUTH_DB_USER: auth_api
       EBAY_SOFT_AUTH_DB_PASSWORD: ${EBAY_SOFT_AUTH_DB_PASSWORD:-auth_api}
       EBAY_SOFT_INTERNAL_JWT_SECRET: ${EBAY_SOFT_INTERNAL_JWT_SECRET}
+      # Pre-Argon2 HMAC pepper (#159). 32+ bytes random, base64-encoded. Lives in
+      # /etc/ebay-soft/env; never in this repo. If missing, the auth-api app defaults
+      # to a clearly-marked dev-only value (app.yml) — fine for dev, refused-at-init
+      # if you ever set this to <32 bytes.
+      EBAY_SOFT_PASSWORD_PEPPER_V1: ${EBAY_SOFT_PASSWORD_PEPPER_V1}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
       OTEL_SERVICE_NAME: auth-api
       # -Xss512k halves the per-thread stack from the 1 MB default — Spring Boot keeps ~30 threads
