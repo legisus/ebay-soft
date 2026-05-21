@@ -44,7 +44,7 @@ spring:
             - id: accounting-api
               uri: ${EBAY_SOFT_ACCOUNTING_API_URL:http://accounting-api:8084}
               predicates:
-                - Path=/v1/pnl/**,/v1/exports/**,/v1/cogs/**
+                - Path=/v1/pnl/**,/v1/exports/**,/v1/cogs/**,/v1/skus/**
   data:
     redis:
       host: ${REDIS_HOST:localhost}
