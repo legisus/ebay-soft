@@ -37,15 +37,15 @@ listOf(
     "services:accounting-api",
     "services:analytics-api",
     "services:inventory-api",
+    "services:notif-api",
+    "services:billing-api",
+    "services:admin-api",
+    "services:repricer-api",
 ).forEach { path ->
     val dir = file(path.replace(":", "/"))
     if (dir.isDirectory) include(path)
 }
-// Future services — uncomment when the directory + skeleton exist.
-// "services:repricer-api"
-// "services:notif-api"
-// "services:billing-api"
-// "services:admin-api"
+// "services:ml-api"  // Python (FastAPI), separate from this Gradle build
 
 // Generated OpenAPI clients — same opt-in pattern as services.
 listOf(
