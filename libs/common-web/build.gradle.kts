@@ -15,6 +15,7 @@ dependencies {
     compileOnly("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
     compileOnly("org.springframework:spring-context:6.2.0")
     compileOnly("org.springframework:spring-web:6.2.0")
+    compileOnly("org.springframework:spring-jdbc:6.2.0")
     compileOnly("org.springframework.boot:spring-boot-autoconfigure:$springBootVersion")
 
     testImplementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
