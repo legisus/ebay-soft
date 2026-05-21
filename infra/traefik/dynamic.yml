@@ -44,7 +44,11 @@ http:
           - url: "http://api-gateway:8080"
         passHostHeader: true
         healthCheck:
-          path: /actuator/health/readiness
+          # Actuator moved to api-gateway's management port (9080) but Traefik
+          # talks to the public port (8080) — use a real /v1/* route as the
+          # signal instead. /v1/health proxies to auth-api and returns 200
+          # whenever the platform is reachable end-to-end.
+          path: /v1/health
           interval: 10s
           timeout: 3s
 
