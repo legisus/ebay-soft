@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: analytics-api
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: ${EBAY_SOFT_ANALYTICS_PORT:8085}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true

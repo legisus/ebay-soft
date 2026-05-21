@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: inventory-api
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: ${EBAY_SOFT_INVENTORY_PORT:8086}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true

@@ -35,19 +35,17 @@ listOf(
     "services:ebay-conn-api",
     "services:sync-api",
     "services:accounting-api",
+    "services:analytics-api",
+    "services:inventory-api",
 ).forEach { path ->
     val dir = file(path.replace(":", "/"))
     if (dir.isDirectory) include(path)
 }
-// include("services:ebay-conn-api")
-// include("services:sync-api")
-// include("services:accounting-api")
-// include("services:inventory-api")
-// include("services:repricer-api")
-// include("services:analytics-api")
-// include("services:notif-api")
-// include("services:billing-api")
-// include("services:admin-api")
+// Future services — uncomment when the directory + skeleton exist.
+// "services:repricer-api"
+// "services:notif-api"
+// "services:billing-api"
+// "services:admin-api"
 
 // Generated OpenAPI clients — same opt-in pattern as services.
 listOf(
