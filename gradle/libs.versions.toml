@@ -7,7 +7,7 @@ java                  = "25"
 kotlin                = "2.1.0"
 
 # Spring
-springBoot            = "3.5.0"
+springBoot            = "4.0.6"
 springCloud           = "2024.0.0"
 springCloudGateway    = "4.2.0"
 
@@ -38,7 +38,7 @@ wiremock              = "3.9.2"
 archunit              = "1.4.2"
 
 # Build / quality plugins
-springDepMgmt         = "1.1.6"
+springDepMgmt         = "1.1.7"
 openapiGenerator      = "7.10.0"
 spotless              = "6.25.0"
 errorprone            = "4.1.0"
